@@ -1,0 +1,249 @@
+# .gitignore para Projeto API Neural (Roleta)
+
+# ====================
+# NOTA IMPORTANTE
+# ====================
+# .env NÃO está sendo ignorado por escolha do desenvolvedor
+# Em produção, SEMPRE adicione .env ao .gitignore!
+# ====================
+
+# Python
+# ====================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Ambientes Virtuais
+# ====================
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+.virtualenv/
+*.venv
+
+# IDEs e Editores
+# ====================
+# VSCode
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+.idea_modules/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Jupyter Notebook
+# ====================
+.ipynb_checkpoints
+*.ipynb_checkpoints/
+profile_default/
+ipython_config.py
+
+# MacOS
+# ====================
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+# ====================
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+# ====================
+*~
+.directory
+.Trash-*
+.nfs*
+
+# Logs e Databases
+# ====================
+*.log
+*.sqlite
+*.sqlite3
+*.db
+logs/
+log/
+api.log
+*.log.*
+
+# Testes
+# ====================
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+*.py,cover
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+pytestdebug.log
+
+# Resultados de testes
+# ====================
+tests/resultados/*.json
+tests/resultados/*.csv
+!tests/resultados/.gitkeep
+
+# MongoDB local
+# ====================
+data/
+mongodb/
+dump/
+*.bson
+
+# Arquivos temporários
+# ====================
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+.cache/
+tmp/
+temp/
+
+# Documentação
+# ====================
+docs/_build/
+site/
+
+# Mypy
+# ====================
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre
+# ====================
+.pyre/
+
+# Pytype
+# ====================
+.pytype/
+
+# Celery
+# ====================
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath
+# ====================
+*.sage.py
+
+# Spyder
+# ====================
+.spyderproject
+.spyproject
+
+# Rope
+# ====================
+.ropeproject
+
+# Arquivos de configuração locais
+# ====================
+config.local.py
+settings.local.py
+local_settings.py
+
+# Backups
+# ====================
+*.backup
+backup/
+backups/
+
+# Node (caso tenha frontend)
+# ====================
+node_modules/
+package-lock.json
+yarn.lock
+
+# Certificados e chaves
+# ====================
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+
+# Arquivos grandes
+# ====================
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# Uploads temporários
+# ====================
+uploads/
+media/uploads/
+
+# Cache do pip
+# ====================
+.pip_cache/
+
+# Arquivos do sistema
+# ====================
+.fuse_hidden*

@@ -1,0 +1,514 @@
+# Setup - Analizer Master + Estelar
+
+## 📄 .env (Copie e configure)
+
+```env
+# ========== AMBIENTE ==========
+ENVIRONMENT=development
+API_HOST=0.0.0.0
+API_PORT=8000
+
+# ========== MONGODB ==========
+MONGODB_HOST=localhost
+MONGODB_PORT=27017
+MONGODB_USER=
+MONGODB_PASSWORD=
+MONGODB_DATABASE=roulette_db
+MONGODB_COLLECTION_SPINS=spins
+MONGODB_MAX_POOL_SIZE=10
+MONGODB_MIN_POOL_SIZE=1
+
+# ========== CORS ==========
+CORS_ORIGINS=["http://localhost:3000","http://localhost:8080","http://127.0.0.1:3000"]
+
+# ========== CACHE ==========
+CACHE_ENABLED=true
+CACHE_TTL_SECONDS=300
+
+# ========== PADRÕES ==========
+MASTER_JANELA_SIZE=3
+MASTER_MIN_SUPPORT=0.5
+MASTER_DECAY_FACTOR=0.95
+
+ESTELAR_JANELA_SIZE=3
+ESTELAR_MIN_SIMILARITY=0.6
+
+CHAIN_MAX_LENGTH=4
+CHAIN_MIN_SUPPORT=2
+CHAIN_RECENT_WINDOW=30
+
+# ========== ENSEMBLE (PESOS) ==========
+W_MASTER=1.0
+W_ESTELAR=1.0
+W_CHAIN=0.8
+W_TEMPORAL=0.8
+
+# ========== TEMPORAL ==========
+TEMPORAL_DEFAULT_INTERVAL=5
+TEMPORAL_DEFAULT_DAYS_BACK=30
+TEMPORAL_MAX_DAYS_BACK=365
+
+# ========== LIMITES ==========
+MAX_SUGGESTIONS=18
+MIN_SUGGESTIONS=3
+DEFAULT_SUGGESTIONS=6
+MIN_HISTORY_SIZE=10
+MAX_HISTORY_SIZE=500
+
+# ========== LOGGING ==========
+LOG_LEVEL=INFO
+LOG_FILE=api.log
+```
+
+---
+
+## 📋 README.md
+
+```markdown
+# 🎰 Analizer Master + Estelar
+
+API para análise comportamental de roleta usando padrões Master, Estelar e Chain.
+
+## 🏗️ Arquitetura
+
+### Padrões de Análise (Separados)
+
+1. **MASTER** - Padrões exatos e recorrentes
+2. **ESTELAR** - Equivalências subjetivas
+3. **CHAIN** - Análise contextual de fluxo
+4. **TEMPORAL** - Filtro por horário
+
+### Tecnologias
+
+- **FastAPI** - Framework web assíncrono
+- **MongoDB** - Banco de dados (Motor driver)
+- **Pydantic** - Validação de dados
+- **Python 3.11+**
+
+---
+
+## 🚀 Instalação
+
+### 1. Clonar repositório
+
+```bash
+git clone <repo-url>
+cd analizer-master-estelar
+```
+
+### 2. Criar ambiente virtual
+
+```bash
+python -m venv venv
+
+# Linux/Mac
+source venv/bin/activate
+
+# Windows
+venv\Scripts\activate
+```
+
+### 3. Instalar dependências
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configurar .env
+
+```bash
+cp .env.example .env
+nano .env  # Edite com suas configurações
+```
+
+### 5. Iniciar MongoDB
+
+```bash
+# Linux
+sudo systemctl start mongod
+
+# Mac
+brew services start mongodb-community
+
+# Docker
+docker run -d -p 27017:27017 --name mongodb mongo:latest
+```
+
+### 6. Executar aplicação
+
+```bash
+# Desenvolvimento (com auto-reload)
+uvicorn main:app --reload --port 8000
+
+# Ou usar o próprio main.py
+python main.py
+
+# Produção (múltiplos workers)
+uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+```
+
+---
+
+## 📡 Endpoints
+
+### Health Check
+
+```bash
+GET /health
+GET /ping
+```
+
+### Histórico
+
+```bash
+# Buscar últimos N números
+GET /api/historico/{roulette_id}?limit=500
+
+# Histórico detalhado
+GET /api/historico/{roulette_id}/detailed?limit=100
+```
+
+### Análises Individuais
+
+```bash
+# Análise MASTER apenas
+GET /api/analise/{roulette_id}/master
+
+# Análise ESTELAR apenas
+GET /api/analise/{roulette_id}/estelar
+
+# Análise CHAIN apenas
+GET /api/analise/{roulette_id}/chain
+
+# Análise completa (todos)
+GET /api/analise/{roulette_id}/completa
+```
+
+### Sugestões
+
+```bash
+# Sugestões combinadas
+GET /api/sugestao/{roulette_id}?quantidade=6
+
+# Com configurações específicas
+GET /api/sugestao/{roulette_id}?quantidade=9&usar_master=true&usar_estelar=true&usar_chain=true
+
+# Com filtro temporal
+GET /api/sugestao/{roulette_id}?usar_temporal=true&horario=14:30&intervalo_minutos=10&dias_retroativos=30
+```
+
+---
+
+## 📊 Estrutura MongoDB
+
+### Coleção: `spins`
+
+```json
+{
+  "_id": ObjectId("..."),
+  "roulette_id": "pragmatic-brazilian-roulette",
+  "number": 13,
+  "timestamp": ISODate("2025-10-17T14:30:00Z"),
+  "round_id": "abc123"
+}
+```
+
+### Índices Criados Automaticamente
+
+```javascript
+// Composto para consultas temporais
+{roulette_id: 1, timestamp: -1}
+
+// Para filtro por número
+{roulette_id: 1, number: 1}
+
+// Unicidade
+{roulette_id: 1, round_id: 1} // UNIQUE
+```
+
+---
+
+## 🧪 Testes
+
+### Executar todos os testes
+
+```bash
+pytest tests/ -v
+```
+
+### Testes específicos
+
+```bash
+# Testar padrão Master
+pytest tests/test_patterns/test_master.py -v
+
+# Testar rotas
+pytest tests/test_routes/ -v
+
+# Com cobertura
+pytest tests/ --cov=. --cov-report=html
+```
+
+### Testar API manualmente
+
+```bash
+# Health check
+curl http://localhost:8000/health
+
+# Buscar histórico
+curl http://localhost:8000/api/historico/pragmatic-brazilian-roulette?limit=10
+
+# Gerar sugestões
+curl "http://localhost:8000/api/sugestao/pragmatic-brazilian-roulette?quantidade=6"
+```
+
+---
+
+## 🔧 Desenvolvimento
+
+### Estrutura de Pastas
+
+```
+analizer-master-estelar/
+├── main.py              # Aplicação principal
+├── config/              # Configurações
+├── patterns/            # Padrões (Master, Estelar, Chain)
+├── services/            # Serviços de negócio
+├── routes/              # Rotas da API
+├── models/              # Modelos Pydantic
+├── utils/               # Utilitários
+└── tests/               # Testes
+```
+
+### Adicionar novo padrão
+
+1. Criar classe em `patterns/novo_padrao.py`
+2. Herdar de `BasePattern`
+3. Implementar método `analyze()`
+4. Adicionar ao `EnsembleAnalyzer`
+5. Criar testes em `tests/test_patterns/`
+
+### Código de exemplo
+
+```python
+# patterns/novo_padrao.py
+from patterns.base import BasePattern
+
+class NovoPattern(BasePattern):
+    def analyze(self, history: List[int]) -> Dict:
+        # Sua lógica aqui
+        return {
+            "candidatos": [...],
+            "scores": {...},
+            "metadata": {...}
+        }
+```
+
+---
+
+## 📝 Logs
+
+### Localização
+
+```bash
+# Ver logs em tempo real
+tail -f api.log
+
+# Buscar erros
+grep "ERROR" api.log
+
+# Últimas 100 linhas
+tail -n 100 api.log
+```
+
+### Formato
+
+```
+2025-10-17 14:30:00 - main - INFO - ✅ MongoDB conectado
+2025-10-17 14:30:01 - routes.sugestao - INFO - ➡️ GET /api/sugestao/pragmatic-brazilian-roulette
+2025-10-17 14:30:01 - routes.sugestao - INFO - ⬅️ Status: 200 - Tempo: 0.15s
+```
+
+---
+
+## 🔒 Produção
+
+### Variáveis de ambiente importantes
+
+```env
+ENVIRONMENT=production
+API_HOST=0.0.0.0
+API_PORT=8000
+MONGODB_USER=seu_usuario
+MONGODB_PASSWORD=senha_segura
+CORS_ORIGINS=["https://seudominio.com"]
+```
+
+### Executar com Gunicorn
+
+```bash
+pip install gunicorn
+
+gunicorn main:app \
+  --workers 4 \
+  --worker-class uvicorn.workers.UvicornWorker \
+  --bind 0.0.0.0:8000 \
+  --access-logfile - \
+  --error-logfile -
+```
+
+### Docker (opcional)
+
+```dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+```bash
+docker build -t analizer-api .
+docker run -p 8000:8000 --env-file .env analizer-api
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### MongoDB não conecta
+
+```bash
+# Verificar se MongoDB está rodando
+sudo systemctl status mongod
+
+# Testar conexão
+mongosh --eval "db.adminCommand('ping')"
+
+# Ver logs do MongoDB
+sudo tail -f /var/log/mongodb/mongod.log
+```
+
+### Erro de importação
+
+```bash
+# Verificar se venv está ativado
+which python
+
+# Reinstalar dependências
+pip install -r requirements.txt --force-reinstall
+```
+
+### CORS error
+
+Adicione seu domínio em `.env`:
+```env
+CORS_ORIGINS=["http://localhost:3000","https://seusite.com"]
+```
+
+---
+
+## 📚 Documentação API
+
+Após iniciar a aplicação, acesse:
+
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+- **OpenAPI JSON**: http://localhost:8000/openapi.json
+
+---
+
+## 🤝 Contribuindo
+
+1. Fork o projeto
+2. Crie uma branch (`git checkout -b feature/nova-funcionalidade`)
+3. Commit suas mudanças (`git commit -m 'Adiciona nova funcionalidade'`)
+4. Push para a branch (`git push origin feature/nova-funcionalidade`)
+5. Abra um Pull Request
+
+---
+
+## 📄 Licença
+
+Projeto proprietário - Todos os direitos reservados
+
+---
+
+## 👥 Contato
+
+Para dúvidas ou suporte, contate o desenvolvedor.
+
+---
+
+**Versão**: 1.0.0  
+**Última atualização**: 17/10/2025
+```
+
+---
+
+## 🎯 Comandos Rápidos
+
+```bash
+# Criar estrutura de pastas
+mkdir -p config patterns services routes models utils middleware tests scripts
+
+# Criar arquivos __init__.py
+touch config/__init__.py patterns/__init__.py services/__init__.py routes/__init__.py models/__init__.py utils/__init__.py middleware/__init__.py tests/__init__.py
+
+# Executar aplicação
+python main.py
+
+# Ou com uvicorn
+uvicorn main:app --reload
+
+# Executar testes
+pytest tests/ -v
+
+# Formatar código
+black . --line-length 100
+
+# Verificar estilo
+flake8 . --max-line-length 100
+
+# Verificar tipos
+mypy .
+```
+
+---
+
+## 📦 requirements.txt completo
+
+```txt
+# FastAPI e servidor
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# MongoDB
+motor==3.3.2
+pymongo==4.6.0
+
+# Validação e configuração
+pydantic==2.5.0
+pydantic-settings==2.1.0
+python-dotenv==1.0.0
+
+# Utilitários
+python-dateutil==2.8.2
+
+# Desenvolvimento
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+httpx==0.25.2
+black==23.12.0
+flake8==6.1.0
+mypy==1.7.1
+
+# Produção
+gunicorn==21.2.0
+```

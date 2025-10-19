@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analizer Master + Estelar + Chain</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+        }
+        .numero-chip {
+            transition: all 0.3s ease;
+        }
+        .numero-chip:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+        .consenso-total { 
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+        }
+        .consenso-duplo { 
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        }
+        .faltante-badge {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .loading {
+            border: 4px solid #1e293b;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="p-4">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-white mb-2">
+                🎯 Analizer Master + Estelar + Chain
+            </h1>
+            <p class="text-gray-400">Sistema Ensemble de Sugestões para Roleta</p>
+            <p class="text-gray-500 text-sm mt-2">{{ dados.roulette_id }}</p>
+        </div>
+
+        <!-- Configuração -->
+        <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 mb-6 border border-gray-700">
+            <h2 class="text-xl font-bold text-white mb-4">⚙️ Configuração</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="text-gray-300 text-sm block mb-2">Quantidade de Sugestões</label>
+                    <input type="number" id="quantidade" min="1" max="12" 
+                           class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
+                           value="{{ dados.configuracao.quantidade_solicitada }}">
+                </div>
+                <div>
+                    <label class="text-gray-300 text-sm block mb-2">Máximo de Proteções</label>
+                    <input type="number" id="maxProtecoes" min="0" max="10" 
+                           class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
+                           value="6">
+                </div>
+            </div>
+            <button onclick="buscarSugestao()" 
+                    class="mt-4 w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 px-6 rounded-lg transition-all transform hover:scale-105">
+                🔄 Atualizar Sugestão
+            </button>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="hidden flex justify-center items-center py-12">
+            <div class="loading"></div>
+        </div>
+
+        <!-- Erro -->
+        <div id="erro" class="hidden bg-red-900/50 border border-red-700 rounded-xl p-4 mb-6">
+            <p class="text-red-300" id="erroMsg"></p>
+        </div>
+
+        <!-- Resultados -->
+        <div id="resultados" class="space-y-6">
+            
+            <!-- Últimos Números -->
+            <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+                <h2 class="text-xl font-bold text-white mb-4">📊 Contexto Atual</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-gray-400 text-sm mb-2">Último Número:</p>
+                        <div class="flex items-center gap-2">
+                            <div class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white font-bold text-2xl w-14 h-14 rounded-full flex items-center justify-center shadow-lg">
+                                {{ dados.analise.ultimo_numero }}
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-gray-400 text-sm mb-2">Últimos 10:</p>
+                        <div class="flex flex-wrap gap-2">
+                            {% for num in dados.analise.ultimos_10 %}
+                            <div class="bg-gray-700 text-white w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold">
+                                {{ num }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sugestões Principais -->
+            <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+                <h2 class="text-xl font-bold text-white mb-4">🎲 Sugestões Principais</h2>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    {% for sug in dados.sugestoes.principais %}
+                    <div class="text-center">
+                        <div class="numero-chip 
+                            {% if 'total' in sug.consenso %}consenso-total
+                            {% elif 'duplo' in sug.consenso %}consenso-duplo
+                            {% else %}bg-gray-700{% endif %}
+                            text-white font-bold text-2xl w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-lg relative">
+                            {{ sug.numero }}
+                            {% if sug.faltante %}
+                            <span class="faltante-badge absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">!</span>
+                            {% endif %}
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2">#{{ sug.ranking }}</p>
+                        <p class="text-xs text-gray-500">Score: {{ "%.3f"|format(sug.score) }}</p>
+                        <p class="text-xs text-gray-500">
+                            {% if 'total' in sug.consenso %}🥇 Total
+                            {% elif 'duplo' in sug.consenso %}🥈 Duplo
+                            {% elif 'unico' in sug.consenso %}🥉 Único
+                            {% else %}Ensemble{% endif %}
+                        </p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Proteções -->
+            <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+                <h2 class="text-xl font-bold text-white mb-4">🛡️ Proteções</h2>
+                <div class="flex flex-wrap gap-2">
+                    {% for prot in dados.sugestoes.protecoes %}
+                    <div class="bg-gray-700 text-gray-300 px-3 py-1 rounded-lg text-sm" title="{{ prot.tipo }}">
+                        {{ prot.numero }}
+                    </div>
+                    {% endfor %}
+                </div>
+                <p class="text-gray-400 text-sm mt-4">
+                    Total de números cobertos: <span class="text-blue-400 font-bold">{{ dados.sugestoes.total_numeros }}</span>
+                </p>
+            </div>
+
+            <!-- Análise de Consenso -->
+            <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+                <h2 class="text-xl font-bold text-white mb-4">🤝 Análise de Consenso</h2>
+                <div class="space-y-4">
+                    <div>
+                        <p class="text-green-400 font-semibold mb-2">✅ Consenso Total (3/3):</p>
+                        <div class="flex flex-wrap gap-2">
+                            {% if dados.analise.consenso.consenso_total %}
+                                {% for num in dados.analise.consenso.consenso_total %}
+                                <div class="bg-green-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg">{{ num }}</div>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-gray-500 text-sm">Nenhum</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-blue-400 font-semibold mb-2">🔵 Consenso Duplo:</p>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <p class="text-gray-400 text-xs mb-1">Master + Estelar</p>
+                                <div class="flex flex-wrap gap-2">
+                                    {% if dados.analise.consenso.consenso_duplo.master_estelar %}
+                                        {% for num in dados.analise.consenso.consenso_duplo.master_estelar %}
+                                        <div class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg">{{ num }}</div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-gray-500 text-sm">Nenhum</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div>
+                                <p class="text-gray-400 text-xs mb-1">Master + Chain</p>
+                                <div class="flex flex-wrap gap-2">
+                                    {% if dados.analise.consenso.consenso_duplo.master_chain %}
+                                        {% for num in dados.analise.consenso.consenso_duplo.master_chain %}
+                                        <div class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg">{{ num }}</div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-gray-500 text-sm">Nenhum</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div>
+                                <p class="text-gray-400 text-xs mb-1">Estelar + Chain</p>
+                                <div class="flex flex-wrap gap-2">
+                                    {% if dados.analise.consenso.consenso_duplo.estelar_chain %}
+                                        {% for num in dados.analise.consenso.consenso_duplo.estelar_chain %}
+                                        <div class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg">{{ num }}</div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-gray-500 text-sm">Nenhum</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-yellow-400 font-semibold mb-2">⚠️ Faltantes:</p>
+                        <div class="flex flex-wrap gap-2">
+                            {% if dados.analise.faltantes %}
+                                {% for num in dados.analise.faltantes %}
+                                <div class="bg-yellow-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg">{{ num }}</div>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-gray-500 text-sm">Nenhum</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Padrões Detectados -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- MASTER -->
+                <div class="bg-gradient-to-br from-purple-900/50 to-purple-800/30 rounded-xl p-6 border border-purple-700">
+                    <h3 class="text-lg font-bold text-purple-300 mb-3">🎯 MASTER</h3>
+                    <div class="space-y-2 text-sm">
+                        <p class="text-gray-300">Padrões: <span class="text-white font-bold">{{ dados.padroes.master.padroes_encontrados }}</span></p>
+                        <p class="text-gray-300">Modo: <span class="text-white font-bold">{{ dados.padroes.master.modo }}</span></p>
+                        <p class="text-gray-400 text-xs mt-3">Top 3:</p>
+                        <div class="flex gap-2">
+                            {% for num in dados.padroes.master.top_3 %}
+                            <div class="bg-purple-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg">{{ num }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ESTELAR -->
+                <div class="bg-gradient-to-br from-blue-900/50 to-blue-800/30 rounded-xl p-6 border border-blue-700">
+                    <h3 class="text-lg font-bold text-blue-300 mb-3">⭐ ESTELAR</h3>
+                    <div class="space-y-2 text-sm">
+                        <p class="text-gray-300">Padrões: <span class="text-white font-bold">{{ dados.padroes.estelar.padroes_equivalentes }}</span></p>
+                        <div class="text-xs text-gray-400 space-y-1">
+                            {% for tipo, qtd in dados.padroes.estelar.tipos.items() %}
+                            <p>{{ tipo }}: {{ qtd }}</p>
+                            {% endfor %}
+                        </div>
+                        <p class="text-gray-400 text-xs mt-3">Top 3:</p>
+                        <div class="flex gap-2">
+                            {% for num in dados.padroes.estelar.top_3 %}
+                            <div class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg">{{ num }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CHAIN -->
+                <div class="bg-gradient-to-br from-green-900/50 to-green-800/30 rounded-xl p-6 border border-green-700">
+                    <h3 class="text-lg font-bold text-green-300 mb-3">🔗 CHAIN</h3>
+                    <div class="space-y-2 text-sm">
+                        <p class="text-gray-300">Cadeias: <span class="text-white font-bold">{{ dados.padroes.chain.cadeias_aprendidas }}</span></p>
+                        <p class="text-gray-300">Inversões: <span class="text-white font-bold">{{ dados.padroes.chain.inversoes }}</span></p>
+                        <p class="text-gray-300">Compensações: <span class="text-white font-bold">{{ dados.padroes.chain.compensacoes }}</span></p>
+                        <p class="text-gray-400 text-xs mt-3">Top 3:</p>
+                        <div class="flex gap-2">
+                            {% for num in dados.padroes.chain.top_3 %}
+                            <div class="bg-green-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg">{{ num }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Pares Chain -->
+            <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+                <h2 class="text-xl font-bold text-white mb-4">🔗 Top Pares (Chain)</h2>
+                <div class="space-y-2">
+                    {% for par in dados.padroes.chain.top_pares %}
+                    <div class="flex items-center gap-3 bg-gray-700 rounded-lg p-3">
+                        <div class="bg-green-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">{{ par.de }}</div>
+                        <span class="text-gray-400">→</span>
+                        <div class="bg-green-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">{{ par.para }}</div>
+                        <span class="text-gray-400 text-sm flex-1">Ocorrências: <span class="text-white font-bold">{{ par.vezes }}x</span></span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Info Configuração -->
+            <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-700">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-400">
+                    <div>
+                        <span class="font-semibold text-gray-300">Pesos:</span>
+                        Master: {{ "%.2f"|format(dados.configuracao.pesos.master) }} |
+                        Estelar: {{ "%.2f"|format(dados.configuracao.pesos.estelar) }} |
+                        Chain: {{ "%.2f"|format(dados.configuracao.pesos.chain) }}
+                    </div>
+                    <div>
+                        <span class="font-semibold text-gray-300">Proteções:</span>
+                        {{ 'Habilitadas' if dados.configuracao.protecoes_habilitadas else 'Desabilitadas' }}
+                    </div>
+                    <div>
+                        <span class="font-semibold text-gray-300">Histórico:</span>
+                        {{ dados.configuracao.historico_analisado }} números
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        async function buscarSugestao() {
+            const quantidade = document.getElementById('quantidade').value;
+            const maxProtecoes = document.getElementById('maxProtecoes').value;
+
+            // Mostra loading
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('resultados').classList.add('hidden');
+            document.getElementById('erro').classList.add('hidden');
+
+            try {
+                const url = window.location.pathname + `?quantidade=${quantidade}&max_protecoes=${maxProtecoes}`;
+                
+                // Força reload da página para atualizar
+                window.location.href = url;
+
+            } catch (error) {
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('erro').classList.remove('hidden');
+                document.getElementById('erroMsg').textContent = `Erro ao buscar sugestão: ${error.message}`;
+                console.error('Erro:', error);
+            }
+        }
+
+        
+    </script>
+</body>
+</html>
