@@ -43,6 +43,10 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .tab-active {
+            border-bottom: 2px solid #3b82f6;
+            color: #3b82f6;
+        }
     </style>
 </head>
 <body class="p-4">
@@ -56,299 +60,670 @@
             <p class="text-gray-500 text-sm mt-2">{{ dados.roulette_id }}</p>
         </div>
 
-        <!-- Configuração -->
-        <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 mb-6 border border-gray-700">
-            <h2 class="text-xl font-bold text-white mb-4">⚙️ Configuração</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="text-gray-300 text-sm block mb-2">Quantidade de Sugestões</label>
-                    <input type="number" id="quantidade" min="1" max="12" 
-                           class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
-                           value="{{ dados.configuracao.quantidade_solicitada }}">
-                </div>
-                <div>
-                    <label class="text-gray-300 text-sm block mb-2">Máximo de Proteções</label>
-                    <input type="number" id="maxProtecoes" min="0" max="10" 
-                           class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
-                           value="6">
-                </div>
+        <!-- Tabs -->
+        <div class="bg-gray-800/50 backdrop-blur-sm rounded-t-xl border-x border-t border-gray-700">
+            <div class="flex gap-4 px-6 pt-4">
+                <button onclick="showTab('sugestao')" id="tab-sugestao" class="tab-active pb-2 px-2 font-semibold transition-all">
+                    📊 Sugestão Atual
+                </button>
+                <button onclick="showTab('config')" id="tab-config" class="pb-2 px-2 text-gray-400 hover:text-white font-semibold transition-all">
+                    ⚙️ Configurações
+                </button>
+                <button onclick="showTab('historico')" id="tab-historico" class="pb-2 px-2 text-gray-400 hover:text-white font-semibold transition-all">
+                    📜 Histórico (20)
+                </button>
             </div>
-            <button onclick="buscarSugestao()" 
-                    class="mt-4 w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 px-6 rounded-lg transition-all transform hover:scale-105">
-                🔄 Atualizar Sugestão
-            </button>
         </div>
 
-        <!-- Loading -->
-        <div id="loading" class="hidden flex justify-center items-center py-12">
-            <div class="loading"></div>
-        </div>
+        <!-- Tab: Configurações -->
+        <div id="content-config" class="hidden bg-gray-800/50 backdrop-blur-sm rounded-b-xl p-6 mb-6 border border-gray-700">
+            <h2 class="text-xl font-bold text-white mb-4">⚙️ Configurações da API</h2>
+            <form id="configForm" class="space-y-6">
+                
+                <!-- Seção: Parâmetros Gerais -->
+                <div>
+                    <h3 class="text-lg font-semibold text-blue-400 mb-3">📋 Parâmetros Gerais</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Quantidade -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                Quantidade de Sugestões
+                                <span class="text-gray-500 text-xs">(1-12)</span>
+                            </label>
+                            <input type="number" id="config-quantidade" name="quantidade" min="1" max="12" 
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
+                                   value="6">
+                        </div>
 
-        <!-- Erro -->
-        <div id="erro" class="hidden bg-red-900/50 border border-red-700 rounded-xl p-4 mb-6">
-            <p class="text-red-300" id="erroMsg"></p>
-        </div>
+                        <!-- Limite Histórico -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                Limite de Histórico
+                                <span class="text-gray-500 text-xs">(100-5000)</span>
+                            </label>
+                            <input type="number" id="config-limite-historico" name="limite_historico" min="100" max="5000" step="100"
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
+                                   value="2000">
+                        </div>
 
-        <!-- Resultados -->
-        <div id="resultados" class="space-y-6">
-            
-            <!-- Últimos Números -->
-            <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
-                <h2 class="text-xl font-bold text-white mb-4">📊 Contexto Atual</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <p class="text-gray-400 text-sm mb-2">Último Número:</p>
-                        <div class="flex items-center gap-2">
-                            <div class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white font-bold text-2xl w-14 h-14 rounded-full flex items-center justify-center shadow-lg">
-                                {{ dados.analise.ultimo_numero }}
-                            </div>
+                        <!-- Máximo de Proteções -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                Máximo de Proteções
+                                <span class="text-gray-500 text-xs">(0-10)</span>
+                            </label>
+                            <input type="number" id="config-max-protecoes" name="max_protecoes" min="0" max="10" 
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
+                                   value="6">
                         </div>
                     </div>
-                    <div>
-                        <p class="text-gray-400 text-sm mb-2">Últimos 10:</p>
-                        <div class="flex flex-wrap gap-2">
-                            {% for num in dados.analise.ultimos_10 %}
-                            <div class="bg-gray-700 text-white w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold">
-                                {{ num }}
-                            </div>
-                            {% endfor %}
+
+                    <!-- Checkboxes -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div class="flex items-center">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="config-incluir-protecoes" name="incluir_protecoes" checked
+                                       class="w-5 h-5 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 text-blue-600">
+                                <span class="ml-3 text-gray-300">Incluir Proteções (espelhos, vizinhos)</span>
+                            </label>
+                        </div>
+
+                        <div class="flex items-center">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="config-incluir-zero" name="incluir_zero" checked
+                                       class="w-5 h-5 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 text-blue-600">
+                                <span class="ml-3 text-gray-300">Sempre incluir Zero nas proteções</span>
+                            </label>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Sugestões Principais -->
-            <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
-                <h2 class="text-xl font-bold text-white mb-4">🎲 Sugestões Principais</h2>
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                    {% for sug in dados.sugestoes.principais %}
-                    <div class="text-center">
-                        <div class="numero-chip 
-                            {% if 'total' in sug.consenso %}consenso-total
-                            {% elif 'duplo' in sug.consenso %}consenso-duplo
-                            {% else %}bg-gray-700{% endif %}
-                            text-white font-bold text-2xl w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-lg relative">
-                            {{ sug.numero }}
-                            {% if sug.faltante %}
-                            <span class="faltante-badge absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">!</span>
-                            {% endif %}
+                <!-- Seção: Pesos do Ensemble -->
+                <div>
+                    <h3 class="text-lg font-semibold text-purple-400 mb-3">⚖️ Pesos do Ensemble</h3>
+                    <p class="text-gray-400 text-sm mb-3">
+                        💡 Ajuste o peso de cada padrão (0.0 a 1.0). Os pesos serão normalizados automaticamente.
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Peso MASTER -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                🎯 Peso MASTER
+                                <span class="text-gray-500 text-xs">(0.0 - 1.0)</span>
+                            </label>
+                            <input type="number" id="config-w-master" name="w_master" min="0" max="1" step="0.05"
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
+                                   value="0.35">
+                            <p class="text-xs text-gray-500 mt-1">Padrões exatos e repetições</p>
                         </div>
-                        <p class="text-xs text-gray-400 mt-2">#{{ sug.ranking }}</p>
-                        <p class="text-xs text-gray-500">Score: {{ "%.3f"|format(sug.score) }}</p>
-                        <p class="text-xs text-gray-500">
-                            {% if 'total' in sug.consenso %}🥇 Total
-                            {% elif 'duplo' in sug.consenso %}🥈 Duplo
-                            {% elif 'unico' in sug.consenso %}🥉 Único
-                            {% else %}Ensemble{% endif %}
+
+                        <!-- Peso ESTELAR -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                ⭐ Peso ESTELAR
+                                <span class="text-gray-500 text-xs">(0.0 - 1.0)</span>
+                            </label>
+                            <input type="number" id="config-w-estelar" name="w_estelar" min="0" max="1" step="0.05"
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
+                                   value="0.35">
+                            <p class="text-xs text-gray-500 mt-1">Equivalências e substituições</p>
+                        </div>
+
+                        <!-- Peso CHAIN -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                🔗 Peso CHAIN
+                                <span class="text-gray-500 text-xs">(0.0 - 1.0)</span>
+                            </label>
+                            <input type="number" id="config-w-chain" name="w_chain" min="0" max="1" step="0.05"
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-green-500 focus:outline-none"
+                                   value="0.30">
+                            <p class="text-xs text-gray-500 mt-1">Cadeias e comportamentos</p>
+                        </div>
+                    </div>
+
+                    <!-- Visualização da soma dos pesos -->
+                    <div class="mt-3 p-3 bg-purple-900/20 border border-purple-700 rounded-lg">
+                        <p class="text-purple-300 text-sm">
+                            📊 Soma atual dos pesos: <span id="soma-pesos" class="font-bold">1.00</span>
+                            <span class="text-xs text-gray-400 ml-2">(serão normalizados automaticamente pela API)</span>
                         </p>
                     </div>
-                    {% endfor %}
                 </div>
-            </div>
 
-            <!-- Proteções -->
-            <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
-                <h2 class="text-xl font-bold text-white mb-4">🛡️ Proteções</h2>
-                <div class="flex flex-wrap gap-2">
-                    {% for prot in dados.sugestoes.protecoes %}
-                    <div class="bg-gray-700 text-gray-300 px-3 py-1 rounded-lg text-sm" title="{{ prot.tipo }}">
-                        {{ prot.numero }}
-                    </div>
-                    {% endfor %}
+                <!-- Botões -->
+                <div class="flex gap-4">
+                    <button type="submit" 
+                            class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 px-6 rounded-lg transition-all transform hover:scale-105">
+                        💾 Salvar e Buscar Sugestão
+                    </button>
+                    <button type="button" onclick="resetarConfiguracoes()"
+                            class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition-all">
+                        🔄 Resetar Padrão
+                    </button>
                 </div>
-                <p class="text-gray-400 text-sm mt-4">
-                    Total de números cobertos: <span class="text-blue-400 font-bold">{{ dados.sugestoes.total_numeros }}</span>
+            </form>
+
+            <div class="mt-6 p-4 bg-blue-900/20 border border-blue-700 rounded-lg">
+                <p class="text-blue-300 text-sm">
+                    💡 <strong>Dica:</strong> As configurações são salvas automaticamente no navegador e aplicadas em todas as buscas.
                 </p>
             </div>
+        </div>
 
-            <!-- Análise de Consenso -->
-            <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
-                <h2 class="text-xl font-bold text-white mb-4">🤝 Análise de Consenso</h2>
-                <div class="space-y-4">
-                    <div>
-                        <p class="text-green-400 font-semibold mb-2">✅ Consenso Total (3/3):</p>
-                        <div class="flex flex-wrap gap-2">
-                            {% if dados.analise.consenso.consenso_total %}
-                                {% for num in dados.analise.consenso.consenso_total %}
+        <!-- Tab: Histórico -->
+        <div id="content-historico" class="hidden bg-gray-800/50 backdrop-blur-sm rounded-b-xl p-6 mb-6 border border-gray-700">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-white">📜 Últimas 20 Sugestões</h2>
+                <button onclick="limparHistorico()" class="bg-red-600 hover:bg-red-700 text-white text-sm font-bold py-2 px-4 rounded-lg transition-all">
+                    🗑️ Limpar Histórico
+                </button>
+            </div>
+            <div id="lista-historico" class="space-y-3">
+                <!-- Será preenchido via JavaScript -->
+            </div>
+        </div>
+
+        <!-- Tab: Sugestão Atual -->
+        <div id="content-sugestao" class="bg-gray-800/50 backdrop-blur-sm rounded-b-xl p-6 mb-6 border border-gray-700">
+            
+            <!-- Botão de Atualização Rápida -->
+            <div class="mb-6">
+                <button onclick="atualizarSugestao()" 
+                        class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-3 px-6 rounded-lg transition-all transform hover:scale-105">
+                    🔄 Atualizar Sugestão (com configurações salvas)
+                </button>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="hidden flex justify-center items-center py-12">
+                <div class="loading"></div>
+            </div>
+
+            <!-- Erro -->
+            <div id="erro" class="hidden bg-red-900/50 border border-red-700 rounded-xl p-4 mb-6">
+                <p class="text-red-300" id="erroMsg"></p>
+            </div>
+
+            <!-- Resultados -->
+            <div id="resultados" class="space-y-6">
+                
+                <!-- Últimos Números -->
+                <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+                    <h2 class="text-xl font-bold text-white mb-4">📊 Contexto Atual</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-gray-400 text-sm mb-2">Último Número:</p>
+                            <div class="flex items-center gap-2">
+                                <div class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white font-bold text-2xl w-14 h-14 rounded-full flex items-center justify-center shadow-lg">
+                                    {{ dados.analise.ultimo_numero }}
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-sm mb-2">Últimos 10:</p>
+                            <div class="flex flex-wrap gap-2">
+                                {% for num in dados.analise.ultimos_10 %}
+                                <div class="bg-gray-700 text-white w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold">
+                                    {{ num }}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sugestões Principais -->
+                <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+                    <h2 class="text-xl font-bold text-white mb-4">🎲 Sugestões Principais</h2>
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                        {% for sug in dados.sugestoes.principais %}
+                        <div class="text-center">
+                            <div class="numero-chip 
+                                {% if 'total' in sug.consenso %}consenso-total
+                                {% elif 'duplo' in sug.consenso %}consenso-duplo
+                                {% else %}bg-gray-700{% endif %}
+                                text-white font-bold text-2xl w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-lg relative">
+                                {{ sug.numero }}
+                                {% if sug.faltante %}
+                                <span class="faltante-badge absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">!</span>
+                                {% endif %}
+                            </div>
+                            <p class="text-xs text-gray-400 mt-2">#{{ sug.ranking }}</p>
+                            <p class="text-xs text-gray-500">Score: {{ "%.3f"|format(sug.score) }}</p>
+                            <p class="text-xs text-gray-500">
+                                {% if 'total' in sug.consenso %}🥇 Total
+                                {% elif 'duplo' in sug.consenso %}🥈 Duplo
+                                {% elif 'unico' in sug.consenso %}🥉 Único
+                                {% else %}Ensemble{% endif %}
+                            </p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Proteções -->
+                <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+                    <h2 class="text-xl font-bold text-white mb-4">🛡️ Proteções</h2>
+                    <div class="flex flex-wrap gap-2">
+                        {% for prot in dados.sugestoes.protecoes %}
+                        <div class="bg-gray-700 text-gray-300 px-3 py-1 rounded-lg text-sm" title="{{ prot.tipo }}">
+                            {{ prot.numero }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <p class="text-gray-400 text-sm mt-4">
+                        Total de números cobertos: <span class="text-blue-400 font-bold">{{ dados.sugestoes.total_numeros }}</span>
+                    </p>
+                </div>
+
+                <!-- Análise de Consenso -->
+                <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+                    <h2 class="text-xl font-bold text-white mb-4">🤝 Análise de Consenso</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <p class="text-green-400 font-semibold mb-2">✅ Consenso Total (3/3):</p>
+                            <div class="flex flex-wrap gap-2">
+                                {% if dados.analise.consenso.consenso_total %}
+                                    {% for num in dados.analise.consenso.consenso_total %}
+                                    <div class="bg-green-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg">{{ num }}</div>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-gray-500 text-sm">Nenhum</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-blue-400 font-semibold mb-2">🔵 Consenso Duplo:</p>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <p class="text-gray-400 text-xs mb-1">Master + Estelar</p>
+                                    <div class="flex flex-wrap gap-2">
+                                        {% if dados.analise.consenso.consenso_duplo.master_estelar %}
+                                            {% for num in dados.analise.consenso.consenso_duplo.master_estelar %}
+                                            <div class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg">{{ num }}</div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <span class="text-gray-500 text-sm">Nenhum</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div>
+                                    <p class="text-gray-400 text-xs mb-1">Master + Chain</p>
+                                    <div class="flex flex-wrap gap-2">
+                                        {% if dados.analise.consenso.consenso_duplo.master_chain %}
+                                            {% for num in dados.analise.consenso.consenso_duplo.master_chain %}
+                                            <div class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg">{{ num }}</div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <span class="text-gray-500 text-sm">Nenhum</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div>
+                                    <p class="text-gray-400 text-xs mb-1">Estelar + Chain</p>
+                                    <div class="flex flex-wrap gap-2">
+                                        {% if dados.analise.consenso.consenso_duplo.estelar_chain %}
+                                            {% for num in dados.analise.consenso.consenso_duplo.estelar_chain %}
+                                            <div class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg">{{ num }}</div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <span class="text-gray-500 text-sm">Nenhum</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-yellow-400 font-semibold mb-2">⚠️ Faltantes:</p>
+                            <div class="flex flex-wrap gap-2">
+                                {% if dados.analise.faltantes %}
+                                    {% for num in dados.analise.faltantes %}
+                                    <div class="bg-yellow-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg">{{ num }}</div>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-gray-500 text-sm">Nenhum</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Padrões Detectados -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- MASTER -->
+                    <div class="bg-gradient-to-br from-purple-900/50 to-purple-800/30 rounded-xl p-6 border border-purple-700">
+                        <h3 class="text-lg font-bold text-purple-300 mb-3">🎯 MASTER</h3>
+                        <div class="space-y-2 text-sm">
+                            <p class="text-gray-300">Padrões: <span class="text-white font-bold">{{ dados.padroes.master.padroes_encontrados }}</span></p>
+                            <p class="text-gray-300">Modo: <span class="text-white font-bold">{{ dados.padroes.master.modo }}</span></p>
+                            <p class="text-gray-400 text-xs mt-3">Top 3:</p>
+                            <div class="flex gap-2">
+                                {% for num in dados.padroes.master.top_3 %}
+                                <div class="bg-purple-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg">{{ num }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ESTELAR -->
+                    <div class="bg-gradient-to-br from-blue-900/50 to-blue-800/30 rounded-xl p-6 border border-blue-700">
+                        <h3 class="text-lg font-bold text-blue-300 mb-3">⭐ ESTELAR</h3>
+                        <div class="space-y-2 text-sm">
+                            <p class="text-gray-300">Padrões: <span class="text-white font-bold">{{ dados.padroes.estelar.padroes_equivalentes }}</span></p>
+                            <div class="text-xs text-gray-400 space-y-1">
+                                {% for tipo, qtd in dados.padroes.estelar.tipos.items() %}
+                                <p>{{ tipo }}: {{ qtd }}</p>
+                                {% endfor %}
+                            </div>
+                            <p class="text-gray-400 text-xs mt-3">Top 3:</p>
+                            <div class="flex gap-2">
+                                {% for num in dados.padroes.estelar.top_3 %}
+                                <div class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg">{{ num }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CHAIN -->
+                    <div class="bg-gradient-to-br from-green-900/50 to-green-800/30 rounded-xl p-6 border border-green-700">
+                        <h3 class="text-lg font-bold text-green-300 mb-3">🔗 CHAIN</h3>
+                        <div class="space-y-2 text-sm">
+                            <p class="text-gray-300">Cadeias: <span class="text-white font-bold">{{ dados.padroes.chain.cadeias_aprendidas }}</span></p>
+                            <p class="text-gray-300">Inversões: <span class="text-white font-bold">{{ dados.padroes.chain.inversoes }}</span></p>
+                            <p class="text-gray-300">Compensações: <span class="text-white font-bold">{{ dados.padroes.chain.compensacoes }}</span></p>
+                            <p class="text-gray-400 text-xs mt-3">Top 3:</p>
+                            <div class="flex gap-2">
+                                {% for num in dados.padroes.chain.top_3 %}
                                 <div class="bg-green-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg">{{ num }}</div>
                                 {% endfor %}
-                            {% else %}
-                                <span class="text-gray-500 text-sm">Nenhum</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div>
-                        <p class="text-blue-400 font-semibold mb-2">🔵 Consenso Duplo:</p>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <p class="text-gray-400 text-xs mb-1">Master + Estelar</p>
-                                <div class="flex flex-wrap gap-2">
-                                    {% if dados.analise.consenso.consenso_duplo.master_estelar %}
-                                        {% for num in dados.analise.consenso.consenso_duplo.master_estelar %}
-                                        <div class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg">{{ num }}</div>
-                                        {% endfor %}
-                                    {% else %}
-                                        <span class="text-gray-500 text-sm">Nenhum</span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div>
-                                <p class="text-gray-400 text-xs mb-1">Master + Chain</p>
-                                <div class="flex flex-wrap gap-2">
-                                    {% if dados.analise.consenso.consenso_duplo.master_chain %}
-                                        {% for num in dados.analise.consenso.consenso_duplo.master_chain %}
-                                        <div class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg">{{ num }}</div>
-                                        {% endfor %}
-                                    {% else %}
-                                        <span class="text-gray-500 text-sm">Nenhum</span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div>
-                                <p class="text-gray-400 text-xs mb-1">Estelar + Chain</p>
-                                <div class="flex flex-wrap gap-2">
-                                    {% if dados.analise.consenso.consenso_duplo.estelar_chain %}
-                                        {% for num in dados.analise.consenso.consenso_duplo.estelar_chain %}
-                                        <div class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg">{{ num }}</div>
-                                        {% endfor %}
-                                    {% else %}
-                                        <span class="text-gray-500 text-sm">Nenhum</span>
-                                    {% endif %}
-                                </div>
                             </div>
                         </div>
                     </div>
-                    <div>
-                        <p class="text-yellow-400 font-semibold mb-2">⚠️ Faltantes:</p>
-                        <div class="flex flex-wrap gap-2">
-                            {% if dados.analise.faltantes %}
-                                {% for num in dados.analise.faltantes %}
-                                <div class="bg-yellow-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg">{{ num }}</div>
-                                {% endfor %}
-                            {% else %}
-                                <span class="text-gray-500 text-sm">Nenhum</span>
-                            {% endif %}
+                </div>
+
+                <!-- Top Pares Chain -->
+                <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+                    <h2 class="text-xl font-bold text-white mb-4">🔗 Top Pares (Chain)</h2>
+                    <div class="space-y-2">
+                        {% for par in dados.padroes.chain.top_pares %}
+                        <div class="flex items-center gap-3 bg-gray-700 rounded-lg p-3">
+                            <div class="bg-green-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">{{ par.de }}</div>
+                            <span class="text-gray-400">→</span>
+                            <div class="bg-green-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">{{ par.para }}</div>
+                            <span class="text-gray-400 text-sm flex-1">Ocorrências: <span class="text-white font-bold">{{ par.vezes }}x</span></span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Info Configuração -->
+                <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-700">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-400">
+                        <div>
+                            <span class="font-semibold text-gray-300">Pesos:</span>
+                            Master: {{ "%.2f"|format(dados.configuracao.pesos.master) }} |
+                            Estelar: {{ "%.2f"|format(dados.configuracao.pesos.estelar) }} |
+                            Chain: {{ "%.2f"|format(dados.configuracao.pesos.chain) }}
+                        </div>
+                        <div>
+                            <span class="font-semibold text-gray-300">Proteções:</span>
+                            {{ 'Habilitadas' if dados.configuracao.protecoes_habilitadas else 'Desabilitadas' }}
+                        </div>
+                        <div>
+                            <span class="font-semibold text-gray-300">Histórico:</span>
+                            {{ dados.configuracao.historico_analisado }} números
                         </div>
                     </div>
                 </div>
+
             </div>
-
-            <!-- Padrões Detectados -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- MASTER -->
-                <div class="bg-gradient-to-br from-purple-900/50 to-purple-800/30 rounded-xl p-6 border border-purple-700">
-                    <h3 class="text-lg font-bold text-purple-300 mb-3">🎯 MASTER</h3>
-                    <div class="space-y-2 text-sm">
-                        <p class="text-gray-300">Padrões: <span class="text-white font-bold">{{ dados.padroes.master.padroes_encontrados }}</span></p>
-                        <p class="text-gray-300">Modo: <span class="text-white font-bold">{{ dados.padroes.master.modo }}</span></p>
-                        <p class="text-gray-400 text-xs mt-3">Top 3:</p>
-                        <div class="flex gap-2">
-                            {% for num in dados.padroes.master.top_3 %}
-                            <div class="bg-purple-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg">{{ num }}</div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ESTELAR -->
-                <div class="bg-gradient-to-br from-blue-900/50 to-blue-800/30 rounded-xl p-6 border border-blue-700">
-                    <h3 class="text-lg font-bold text-blue-300 mb-3">⭐ ESTELAR</h3>
-                    <div class="space-y-2 text-sm">
-                        <p class="text-gray-300">Padrões: <span class="text-white font-bold">{{ dados.padroes.estelar.padroes_equivalentes }}</span></p>
-                        <div class="text-xs text-gray-400 space-y-1">
-                            {% for tipo, qtd in dados.padroes.estelar.tipos.items() %}
-                            <p>{{ tipo }}: {{ qtd }}</p>
-                            {% endfor %}
-                        </div>
-                        <p class="text-gray-400 text-xs mt-3">Top 3:</p>
-                        <div class="flex gap-2">
-                            {% for num in dados.padroes.estelar.top_3 %}
-                            <div class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg">{{ num }}</div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- CHAIN -->
-                <div class="bg-gradient-to-br from-green-900/50 to-green-800/30 rounded-xl p-6 border border-green-700">
-                    <h3 class="text-lg font-bold text-green-300 mb-3">🔗 CHAIN</h3>
-                    <div class="space-y-2 text-sm">
-                        <p class="text-gray-300">Cadeias: <span class="text-white font-bold">{{ dados.padroes.chain.cadeias_aprendidas }}</span></p>
-                        <p class="text-gray-300">Inversões: <span class="text-white font-bold">{{ dados.padroes.chain.inversoes }}</span></p>
-                        <p class="text-gray-300">Compensações: <span class="text-white font-bold">{{ dados.padroes.chain.compensacoes }}</span></p>
-                        <p class="text-gray-400 text-xs mt-3">Top 3:</p>
-                        <div class="flex gap-2">
-                            {% for num in dados.padroes.chain.top_3 %}
-                            <div class="bg-green-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg">{{ num }}</div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Top Pares Chain -->
-            <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
-                <h2 class="text-xl font-bold text-white mb-4">🔗 Top Pares (Chain)</h2>
-                <div class="space-y-2">
-                    {% for par in dados.padroes.chain.top_pares %}
-                    <div class="flex items-center gap-3 bg-gray-700 rounded-lg p-3">
-                        <div class="bg-green-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">{{ par.de }}</div>
-                        <span class="text-gray-400">→</span>
-                        <div class="bg-green-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">{{ par.para }}</div>
-                        <span class="text-gray-400 text-sm flex-1">Ocorrências: <span class="text-white font-bold">{{ par.vezes }}x</span></span>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <!-- Info Configuração -->
-            <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-700">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-400">
-                    <div>
-                        <span class="font-semibold text-gray-300">Pesos:</span>
-                        Master: {{ "%.2f"|format(dados.configuracao.pesos.master) }} |
-                        Estelar: {{ "%.2f"|format(dados.configuracao.pesos.estelar) }} |
-                        Chain: {{ "%.2f"|format(dados.configuracao.pesos.chain) }}
-                    </div>
-                    <div>
-                        <span class="font-semibold text-gray-300">Proteções:</span>
-                        {{ 'Habilitadas' if dados.configuracao.protecoes_habilitadas else 'Desabilitadas' }}
-                    </div>
-                    <div>
-                        <span class="font-semibold text-gray-300">Histórico:</span>
-                        {{ dados.configuracao.historico_analisado }} números
-                    </div>
-                </div>
-            </div>
-
         </div>
     </div>
 
     <script>
-        async function buscarSugestao() {
-            const quantidade = document.getElementById('quantidade').value;
-            const maxProtecoes = document.getElementById('maxProtecoes').value;
+        // ==========================================
+        // CONFIGURAÇÕES - LOCALSTORAGE
+        // ==========================================
+        
+        const CONFIG_KEY = 'analizer_config';
+        const HISTORICO_KEY = 'analizer_historico';
+        
+        // Configuração padrão
+        const configPadrao = {
+            quantidade: 6,
+            incluir_protecoes: true,
+            max_protecoes: 6,
+            incluir_zero: true,
+            limite_historico: 2000,
+            w_master: 0.35,
+            w_estelar: 0.35,
+            w_chain: 0.30
+        };
 
-            // Mostra loading
-            document.getElementById('loading').classList.remove('hidden');
-            document.getElementById('resultados').classList.add('hidden');
-            document.getElementById('erro').classList.add('hidden');
+        // Carrega configurações salvas
+        function carregarConfiguracoes() {
+            const saved = localStorage.getItem(CONFIG_KEY);
+            return saved ? JSON.parse(saved) : configPadrao;
+        }
 
-            try {
-                const url = window.location.pathname + `?quantidade=${quantidade}&max_protecoes=${maxProtecoes}`;
-                
-                // Força reload da página para atualizar
-                window.location.href = url;
+        // Salva configurações
+        function salvarConfiguracoes(config) {
+            localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+        }
 
-            } catch (error) {
-                document.getElementById('loading').classList.add('hidden');
-                document.getElementById('erro').classList.remove('hidden');
-                document.getElementById('erroMsg').textContent = `Erro ao buscar sugestão: ${error.message}`;
-                console.error('Erro:', error);
+        // Reseta para padrão
+        function resetarConfiguracoes() {
+            salvarConfiguracoes(configPadrao);
+            preencherFormulario(configPadrao);
+            atualizarSomaPesos();
+            alert('✅ Configurações resetadas para o padrão!');
+        }
+
+        // Preenche formulário com configurações
+        function preencherFormulario(config) {
+            document.getElementById('config-quantidade').value = config.quantidade;
+            document.getElementById('config-limite-historico').value = config.limite_historico;
+            document.getElementById('config-max-protecoes').value = config.max_protecoes;
+            document.getElementById('config-incluir-protecoes').checked = config.incluir_protecoes;
+            document.getElementById('config-incluir-zero').checked = config.incluir_zero;
+            document.getElementById('config-w-master').value = config.w_master;
+            document.getElementById('config-w-estelar').value = config.w_estelar;
+            document.getElementById('config-w-chain').value = config.w_chain;
+        }
+
+        // Lê valores do formulário
+        function lerFormulario() {
+            return {
+                quantidade: parseInt(document.getElementById('config-quantidade').value),
+                limite_historico: parseInt(document.getElementById('config-limite-historico').value),
+                max_protecoes: parseInt(document.getElementById('config-max-protecoes').value),
+                incluir_protecoes: document.getElementById('config-incluir-protecoes').checked,
+                incluir_zero: document.getElementById('config-incluir-zero').checked,
+                w_master: parseFloat(document.getElementById('config-w-master').value),
+                w_estelar: parseFloat(document.getElementById('config-w-estelar').value),
+                w_chain: parseFloat(document.getElementById('config-w-chain').value)
+            };
+        }
+
+        // Atualiza visualização da soma dos pesos
+        function atualizarSomaPesos() {
+            const wMaster = parseFloat(document.getElementById('config-w-master').value) || 0;
+            const wEstelar = parseFloat(document.getElementById('config-w-estelar').value) || 0;
+            const wChain = parseFloat(document.getElementById('config-w-chain').value) || 0;
+            const soma = wMaster + wEstelar + wChain;
+            document.getElementById('soma-pesos').textContent = soma.toFixed(2);
+        }
+
+        // Listeners para atualizar soma em tempo real
+        ['config-w-master', 'config-w-estelar', 'config-w-chain'].forEach(id => {
+            document.getElementById(id).addEventListener('input', atualizarSomaPesos);
+        });
+
+        // Submissão do formulário
+        document.getElementById('configForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const config = lerFormulario();
+            salvarConfiguracoes(config);
+            alert('✅ Configurações salvas com sucesso!');
+            atualizarSugestao();
+        });
+
+        // ==========================================
+        // HISTÓRICO - LOCALSTORAGE
+        // ==========================================
+
+        function salvarNoHistorico(dados) {
+            let historico = JSON.parse(localStorage.getItem(HISTORICO_KEY) || '[]');
+            
+            const entrada = {
+                timestamp: new Date().toISOString(),
+                horario: new Date().toLocaleString('pt-BR'),
+                sugestoes: dados.sugestoes.principais.map(s => s.numero),
+                protecoes: dados.sugestoes.protecoes.map(p => p.numero),
+                ultimos_10: dados.analise.ultimos_10,
+                ultimo_numero: dados.analise.ultimo_numero,
+                total_numeros: dados.sugestoes.total_numeros,
+                pesos: dados.configuracao.pesos
+            };
+
+            historico.unshift(entrada); // Adiciona no início
+            historico = historico.slice(0, 20); // Mantém apenas 20
+
+            localStorage.setItem(HISTORICO_KEY, JSON.stringify(historico));
+        }
+
+        function carregarHistorico() {
+            return JSON.parse(localStorage.getItem(HISTORICO_KEY) || '[]');
+        }
+
+        function limparHistorico() {
+            if (confirm('⚠️ Tem certeza que deseja limpar todo o histórico?')) {
+                localStorage.removeItem(HISTORICO_KEY);
+                exibirHistorico();
+                alert('✅ Histórico limpo com sucesso!');
             }
         }
 
-        
+        function exibirHistorico() {
+            const historico = carregarHistorico();
+            const container = document.getElementById('lista-historico');
+
+            if (historico.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 text-center py-8">Nenhuma sugestão salva ainda.</p>';
+                return;
+            }
+
+            container.innerHTML = historico.map((item, index) => `
+                <div class="bg-gray-700/50 rounded-lg p-4 border border-gray-600">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <p class="text-white font-semibold">📅 ${item.horario}</p>
+                            <p class="text-gray-400 text-sm">Último número: <span class="text-yellow-400 font-bold">${item.ultimo_numero}</span></p>
+                            ${item.pesos ? `<p class="text-gray-500 text-xs mt-1">Pesos: M:${item.pesos.master.toFixed(2)} E:${item.pesos.estelar.toFixed(2)} C:${item.pesos.chain.toFixed(2)}</p>` : ''}
+                        </div>
+                        <span class="text-gray-500 text-xs">#${index + 1}</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <p class="text-gray-400 text-xs mb-1">🎯 Sugestões:</p>
+                            <div class="flex flex-wrap gap-1">
+                                ${item.sugestoes.map(num => `
+                                    <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold">${num}</div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ${item.protecoes && item.protecoes.length > 0 ? `
+                        <div>
+                            <p class="text-gray-400 text-xs mb-1">🛡️ Proteções (${item.total_numeros} total):</p>
+                            <div class="flex flex-wrap gap-1">
+                                ${item.protecoes.map(num => `
+                                    <div class="bg-gray-600 text-gray-300 w-7 h-7 rounded-full flex items-center justify-center text-xs">${num}</div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                        <div>
+                            <p class="text-gray-400 text-xs mb-1">📊 Últimos 10 da mesa:</p>
+                            <div class="flex flex-wrap gap-1">
+                                ${item.ultimos_10.map(num => `
+                                    <div class="bg-gray-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs">${num}</div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ==========================================
+        // NAVEGAÇÃO ENTRE TABS
+        // ==========================================
+
+        function showTab(tab) {
+            // Esconde todas as tabs
+            document.getElementById('content-sugestao').classList.add('hidden');
+            document.getElementById('content-config').classList.add('hidden');
+            document.getElementById('content-historico').classList.add('hidden');
+
+            // Remove classe ativa de todas as tabs
+            document.getElementById('tab-sugestao').classList.remove('tab-active');
+            document.getElementById('tab-config').classList.remove('tab-active');
+            document.getElementById('tab-historico').classList.remove('tab-active');
+            
+            document.getElementById('tab-sugestao').classList.add('text-gray-400');
+            document.getElementById('tab-config').classList.add('text-gray-400');
+            document.getElementById('tab-historico').classList.add('text-gray-400');
+
+            // Mostra a tab selecionada
+            document.getElementById('content-' + tab).classList.remove('hidden');
+            document.getElementById('tab-' + tab).classList.add('tab-active');
+            document.getElementById('tab-' + tab).classList.remove('text-gray-400');
+
+            // Atualiza histórico se necessário
+            if (tab === 'historico') {
+                exibirHistorico();
+            }
+        }
+
+        // ==========================================
+        // ATUALIZAÇÃO DE SUGESTÃO
+        // ==========================================
+
+        function atualizarSugestao() {
+            const config = carregarConfiguracoes();
+            const params = new URLSearchParams({
+                quantidade: config.quantidade,
+                incluir_protecoes: config.incluir_protecoes,
+                max_protecoes: config.max_protecoes,
+                incluir_zero: config.incluir_zero,
+                limite_historico: config.limite_historico,
+                w_master: config.w_master,
+                w_estelar: config.w_estelar,
+                w_chain: config.w_chain
+            });
+
+            const url = window.location.pathname + '?' + params.toString();
+            window.location.href = url;
+        }
+
+        // ==========================================
+        // INICIALIZAÇÃO
+        // ==========================================
+
+        window.addEventListener('load', () => {
+            // Carrega e preenche configurações
+            const config = carregarConfiguracoes();
+            preencherFormulario(config);
+            atualizarSomaPesos();
+
+            // Salva sugestão atual no histórico (dados do Jinja2)
+            const dadosAtuais = {{ dados | tojson | safe }};
+            salvarNoHistorico(dadosAtuais);
+
+            // Mostra tab de sugestão por padrão
+            showTab('sugestao');
+        });
     </script>
 </body>
 </html>
