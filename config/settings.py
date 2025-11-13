@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     MONGODB_COLLECTION: str = "history"  # ← SUA COLLECTION
     MONGODB_MAX_POOL_SIZE: int = 10
     MONGODB_MIN_POOL_SIZE: int = 1
+    MONGO_URL : str = "mongodb+srv://revesbot:DlBnGmlimRZpIblr@cluster0.c14fnit.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
     
     # ===== CORS =====
     CORS_ORIGINS: List[str] = [

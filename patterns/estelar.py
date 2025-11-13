@@ -1,391 +1,437 @@
 """
-patterns/estelar.py
+patterns/pattern_estelar.py
 
-Padrão ESTELAR - Análise de equivalências subjetivas e comportamentais
+🔱 ANÁLISE ESTELAR (versão simplificada)
+Versão simplificada do padrão Estelar, focada na lógica de "ressonância" entre
+a repetição de um mesmo número (alvo) e o contexto em que ele apareceu no passado.
 
-O ESTELAR reconhece quando a mesa REPETE COMPORTAMENTOS, mesmo que
-com números diferentes, através de EQUIVALÊNCIAS LÓGICAS.
-
-Exemplo:
-  Passado: [9, 22, 31]
-  Agora:   [19, 31, 22]
-  
-  Reconhece: 19 é terminal de 9, e 22/31 trocaram de ordem
-  → Mesmo comportamento, números equivalentes!
+Regras principais:
+- Considera o último número sorteado como alvo (e agora pode testar até os 5 últimos).
+- Procura uma ocorrência anterior desse mesmo alvo no histórico.
+- Compara o contexto atual (número imediatamente anterior ao alvo) com o contexto
+  dessa ocorrência anterior (dois números anteriores ao alvo nesse ponto).
+- Se houver relação forte (igual, espelho, vizinho, terminal ou soma de dígitos),
+  a aposta é construída a partir do número que veio DEPOIS da ocorrência anterior
+  do alvo, expandindo para:
+    - o próprio número
+    - ±1
+    - seus vizinhos de cilindro
+    - seus espelhos
+    - seus terminais
+    - sua "figura" (derivada da soma de dígitos)
+- Retorna um PatternResult, seguindo o padrão da BasePattern do projeto.
 """
 
-from typing import List, Dict, Tuple, Set
-from collections import defaultdict, Counter
+from typing import Dict, List, Any, Optional
 import logging
 
 from patterns.base import BasePattern, PatternResult
-from utils.helpers import (
-    get_vizinhos,
-    get_espelho,
-    get_terminal,
-    get_familia_terminal,
-    get_soma_digitos,
-    get_numeros_mesma_soma,
-    sao_vizinhos,
-)
+from helpers.utils.filters import first_index_after, soma_digitos, get_numbers_by_terminal
+from helpers.utils.get_figure import get_figure
 
 logger = logging.getLogger(__name__)
 
+# === Configurações da roleta ===
 
-class EstelarPattern(BasePattern):
+ROULETTE_WHEEL: List[int] = [
+    0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36,
+    11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9,
+    22, 18, 29, 7, 28, 12, 35, 3, 26
+]
+
+# Espelhos fixos (mesma convenção usada no Estelar antigo)
+MIRRORS: Dict[int, int] = {
+    1: 10, 10: 1,
+    2: 20, 20: 2,
+    3: 30, 30: 3,
+    6: 9,  9: 6,
+    16: 19, 19: 16,
+    26: 29, 29: 26,
+    13: 31, 31: 13,
+    12: 21, 21: 12,
+    32: 23, 23: 32,
+}
+
+# Pesos padrão para os tipos de relação entre contextos
+DEFAULT_RELATION_WEIGHTS: Dict[str, float] = {
+    "igual": 5.0,
+    "espelho": 4.0,
+    "vizinho": 3.0,
+    "terminal": 2.0,
+    "soma_digitos": 1.0,
+}
+
+
+def get_neighbors(number: int, radius: int = 1) -> List[int]:
     """
-    Padrão ESTELAR - Reconhece padrões equivalentes e subjetivos
-    
-    Características:
-    - Trabalha com estruturas de 2-4 números
-    - Aceita equivalências: terminais, vizinhos, espelhos, soma
-    - Identifica padrões que se repetem de forma "intuitiva"
-    - Pondera por força da equivalência
+    Retorna vizinhos de cilindro de um número, com raio especificado.
+    Zero é tratado como central, mas não retornamos zero como vizinho.
     """
-    
-    # Espelhos fixos (definidos no documento)
-    ESPELHOS = {
-        1: 10, 10: 1,
-        2: 20, 20: 2,
-        3: 30, 30: 3,
-        6: 9, 9: 6,
-        16: 19, 19: 16,
-        26: 29, 29: 26,
-        13: 31, 31: 13,
-        12: 21, 21: 12,
-        32: 23, 23: 32,
+    if number not in ROULETTE_WHEEL:
+        return []
+
+    idx = ROULETTE_WHEEL.index(number)
+    neighbors: List[int] = []
+
+    for d in range(1, radius + 1):
+        left_idx = (idx - d) % len(ROULETTE_WHEEL)
+        right_idx = (idx + d) % len(ROULETTE_WHEEL)
+        neighbors.append(ROULETTE_WHEEL[left_idx])
+        neighbors.append(ROULETTE_WHEEL[right_idx])
+
+    # Remove duplicados e o zero
+    return sorted({n for n in neighbors if n != 0})
+
+
+def get_mirrors(number: int) -> List[int]:
+    """Retorna os espelhos de um número, se existirem."""
+    if number in MIRRORS:
+        return [MIRRORS[number]]
+    return []
+
+
+def get_terminal(number: int) -> int:
+    """Retorna o terminal (último dígito) do número."""
+    return abs(int(number)) % 10
+
+
+def digit_sum(number: int) -> int:
+    """Wrapper para soma de dígitos (pode usar o helper do projeto)."""
+    try:
+        # Usa a função já existente no projeto, se desejar manter centralizado
+        return soma_digitos(number)
+    except Exception:
+        # Fallback simples caso algo dê errado
+        return sum(int(d) for d in str(abs(int(number))))
+
+
+def find_relations_between_lists(
+    list1: List[int],
+    list2: List[int],
+    relation_weights: Optional[Dict[str, float]] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Compara todos os pares (a, b) entre duas listas e identifica relações:
+    - igual
+    - espelho
+    - vizinho (raio 2)
+    - terminal
+    - soma_digitos
+
+    Retorna uma lista de dicts:
+    {
+        "a": a,
+        "b": b,
+        "relations": ["igual", "terminal", ...],
+        "score": soma_dos_pesos_dessas_relacoes
     }
-    
-    def __init__(self, config: Dict = None):
-        """
-        Inicializa o padrão ESTELAR
-        
-        Args:
-            config: Configurações
-                - estrutura_min: Tamanho mínimo da estrutura (default: 2)
-                - estrutura_max: Tamanho máximo da estrutura (default: 4)
-                - min_support: Mínimo de ocorrências (default: 2)
-                - peso_equivalencias: Pesos por tipo (dict)
-        """
+    """
+    if relation_weights is None:
+        relation_weights = DEFAULT_RELATION_WEIGHTS
+
+    relations: List[Dict[str, Any]] = []
+
+    for a in list1:
+        if a is None:
+            continue
+
+        mirrors_a = set(get_mirrors(a))
+        neighbors_a = set(get_neighbors(a, radius=2))
+        terminal_a = get_terminal(a)
+        sum_a = digit_sum(a)
+
+        for b in list2:
+            if b is None:
+                continue
+
+            rel_types: List[str] = []
+
+            # 1) Igual
+            if a == b:
+                rel_types.append("igual")
+
+            # 2) Espelho
+            if b in mirrors_a:
+                rel_types.append("espelho")
+
+            # 3) Vizinhos
+            if b in neighbors_a:
+                rel_types.append("vizinho")
+
+            # 4) Mesmo terminal
+            if terminal_a == get_terminal(b):
+                rel_types.append("terminal")
+
+            # 5) Mesma soma de dígitos
+            if sum_a == digit_sum(b):
+                rel_types.append("soma_digitos")
+
+            if rel_types:
+                score = sum(relation_weights.get(r, 0.0) for r in rel_types)
+                relations.append(
+                    {
+                        "a": a,
+                        "b": b,
+                        "relations": rel_types,
+                        "score": score,
+                    }
+                )
+
+    return relations
+
+
+class PatternEstelar(BasePattern):
+    """
+    Versão simplificada do padrão Estelar.
+
+    Em vez de analisar todas as trincas e equivalências possíveis, focamos na
+    lógica do estelar_novo:
+
+    1. Pega o último número (alvo).
+    2. Busca a próxima ocorrência desse alvo no histórico.
+    3. Compara o contexto atual com o contexto dessa ocorrência.
+    4. Se houver relação forte, aposta na região do número que veio depois
+       dessa ocorrência anterior (after_value + vizinhos + espelhos + terminais + figura).
+
+    ADAPTAÇÃO:
+    - Se não houver relação para numbers[0], tenta numbers[1], depois numbers[2],
+      até no máximo 5 números (índices 0..4), parando na primeira que gerar gatilho.
+    """
+
+    def __init__(self, config: Dict[str, Any] = None):
+        if config is None:
+            config = {}
+
         super().__init__(config)
-        
-        self.estrutura_min = self.get_config_value('estrutura_min', 2)
-        self.estrutura_max = self.get_config_value('estrutura_max', 3)  # Reduzido de 4 para 3
-        self.min_support = self.get_config_value('min_support', 2)      # Aumentado de 1 para 2
-        
-        # Pesos das equivalências
-        self.peso_equivalencias = self.get_config_value('peso_equivalencias', {
-            'exato': 1.0,
-            'espelho': 0.9,
-            'terminal': 0.8,
-            'vizinho': 0.7,
-            'soma': 0.6,
-            'dobro_metade': 0.5,
-            'mesma_duzia': 0.4,
-            'mesma_coluna': 0.4,
-        })
-        
-        # Bonus para alternâncias
-        self.bonus_alternancia = self.get_config_value('bonus_alternancia', 1.3)
-    
+
+        # Quantidade máxima de números a considerar do histórico
+        self.memory_long: int = self.get_config_value("memory_long", 300)
+
+        # Proteção no zero
+        self.zero_protection: bool = self.get_config_value("zero_protection", True)
+
+        # Pesos das relações entre contextos
+        relation_weights = config.get("relation_weights") or DEFAULT_RELATION_WEIGHTS
+        # Faz uma cópia para não modificar o dict global
+        self.relation_weights: Dict[str, float] = dict(relation_weights)
+
+        # Raio de vizinhos para montar a aposta (em torno do after_value)
+        self.neighbor_radius: int = self.get_config_value("neighbor_radius", 1)
+
+        # Quantos números recentes testar (ex: 5 → numbers[0]..numbers[4])
+        self.max_offsets: int = self.get_config_value("max_offsets", 5)
+
+    # ------------------------------------------------------------------
+    # API principal usada pelo resto do sistema
+    # ------------------------------------------------------------------
     def analyze(self, history: List[int]) -> PatternResult:
         """
-        Analisa o histórico buscando padrões equivalentes
-        
-        Args:
-            history: Lista de números (mais recente no índice 0)
-        
-        Returns:
-            PatternResult com candidatos e scores
+        Recebe a lista de resultados (mais recente em history[0]) e retorna um
+        PatternResult com:
+            - candidatos: lista de números candidatos à jogada
+            - scores: dict número -> score normalizado
+            - metadata: dicionário com detalhes da análise
         """
-        logger.info(f"🌟 ESTELAR: Analisando {len(history)} números")
-        
-        if not self.validate_history(history, min_size=20):
-            logger.warning("⚠️ ESTELAR: Histórico insuficiente")
+        try:
+            return self._analyze_internal(history)
+        except Exception as e:
+            logger.exception("Erro na análise Estelar simplificada: %s", e)
             return PatternResult(
                 candidatos=[],
                 scores={},
-                metadata={'error': 'Histórico insuficiente'},
-                pattern_name='ESTELAR'
+                metadata={
+                    "error": "Erro na análise Estelar simplificada",
+                    "exception": str(e),
+                },
+                pattern_name=self.name,
             )
-        
-        # Inicializar scores
-        scores = defaultdict(float)
-        
-        metadata = {
-            'estruturas_analisadas': 0,
-            'padroes_equivalentes': 0,
-            'tipos_equivalencia': defaultdict(int),
-        }
-        
-        # Buscar padrões equivalentes de diferentes tamanhos
-        for tam in range(self.estrutura_min, self.estrutura_max + 1):
-            self._buscar_estruturas_equivalentes(
-                history,
-                tam,
-                scores,
-                metadata
+
+    # ------------------------------------------------------------------
+    # Implementação com tentativa em até 5 números
+    # ------------------------------------------------------------------
+    def _analyze_internal(self, history: List[int]) -> PatternResult:
+        # Validação mínima geral
+        if not history or len(history) < 4:
+            return PatternResult(
+                candidatos=[],
+                scores={},
+                metadata={"reason": "Histórico inválido ou insuficiente"},
+                pattern_name=self.name,
             )
-        
-        # Normalizar scores
-        scores_normalizados = self.normalize_scores(dict(scores))
-        
-        # Ordenar candidatos
-        candidatos = sorted(
-            scores_normalizados.keys(),
-            key=lambda n: scores_normalizados[n],
-            reverse=True
-        )
-        
-        logger.info(
-            f"✅ ESTELAR: {len(candidatos)} candidatos, "
-            f"{metadata['padroes_equivalentes']} padrões equivalentes"
-        )
-        
+
+        # Garante que estamos usando apenas até memory_long resultados
+        numbers: List[int] = history[: self.memory_long]
+
+        # Vamos testar numbers[0], depois [1], [2]... até max_offsets (ou o tamanho do histórico)
+        max_index = min(self.max_offsets, len(numbers) - 1)
+
+        for idx_current in range(0, max_index + 1):
+            result = self._analyze_for_index(numbers, idx_current)
+            if result is not None:
+                # Encontrou gatilho para algum dos 5 números testados -> retorna
+                return result
+
+        # Se chegou aqui, nenhum dos 5 números gerou relação
         return PatternResult(
-            candidatos=candidatos,
-            scores=scores_normalizados,
-            metadata=dict(metadata),
-            pattern_name='ESTELAR'
+            candidatos=[],
+            scores={},
+            metadata={
+                "reason": "Nenhuma relação entre contextos nos últimos números",
+                "max_offsets_checked": max_index + 1,
+            },
+            pattern_name=self.name,
         )
-    
-    def _buscar_estruturas_equivalentes(
+
+    # ------------------------------------------------------------------
+    # Lógica original do estelar_novo adaptada para um índice específico
+    # ------------------------------------------------------------------
+    def _analyze_for_index(
         self,
-        history: List[int],
-        tamanho: int,
-        scores: Dict[int, float],
-        metadata: Dict
-    ):
+        numbers: List[int],
+        idx_current: int,
+    ) -> Optional[PatternResult]:
         """
-        Busca estruturas equivalentes de um tamanho específico
-        
-        Args:
-            history: Histórico completo
-            tamanho: Tamanho da estrutura
-            scores: Dicionário de scores (será atualizado)
-            metadata: Metadados (será atualizado)
+        Analisa um alvo específico em numbers[idx_current].
+
+        Se não houver relação entre o contexto atual e o contexto da repetição
+        anterior desse alvo, retorna None (não gatilhou para esse índice).
+        Caso contrário, retorna um PatternResult com a jogada.
         """
-        if len(history) < tamanho + 1:
-            return
-        
-        # Estrutura atual (mais recente)
-        estrutura_atual = history[:tamanho]
-        metadata['estruturas_analisadas'] += 1
-        
-        # Buscar estruturas equivalentes no passado
-        for i in range(tamanho, len(history) - tamanho):
-            estrutura_passada = history[i:i+tamanho]
-            
-            # Verificar se são equivalentes
-            tipo_equiv, forca = self._sao_equivalentes(
-                estrutura_atual,
-                estrutura_passada
-            )
-            
-            if tipo_equiv is None:
-                continue
-            
-            # Estruturas equivalentes encontradas!
-            metadata['padroes_equivalentes'] += 1
-            metadata['tipos_equivalencia'][tipo_equiv] += 1
-            
-            # Ver o que veio depois da estrutura passada
-            if i + tamanho < len(history):
-                numero_seguinte = history[i + tamanho]
-                
-                # Calcular peso
-                peso = forca * self._calcular_peso_temporal(i, len(history))
-                
-                # Aplicar bônus se for alternância
-                if self._detectar_alternancia(estrutura_passada):
-                    peso *= self.bonus_alternancia
-                
-                scores[numero_seguinte] += peso
-                
-                # Adicionar equivalentes do número seguinte
-                equivalentes = self._gerar_equivalentes(numero_seguinte)
-                for equiv, peso_equiv in equivalentes:
-                    scores[equiv] += peso * peso_equiv
-    
-    def _sao_equivalentes(
-        self,
-        seq1: List[int],
-        seq2: List[int]
-    ) -> Tuple[str, float]:
-        """
-        Verifica se duas sequências são equivalentes
-        
-        Args:
-            seq1: Primeira sequência
-            seq2: Segunda sequência
-        
-        Returns:
-            (tipo_equivalencia, força) ou (None, 0) se não equivalentes
-        """
-        if len(seq1) != len(seq2):
-            return None, 0
-        
-        # 1. EXATO (mesmos números)
-        if seq1 == seq2:
-            return 'exato', self.peso_equivalencias['exato']
-        
-        # 2. ESPELHOS (todos são espelhos)
-        if all(self._sao_espelhos(a, b) for a, b in zip(seq1, seq2)):
-            return 'espelho', self.peso_equivalencias['espelho']
-        
-        # 3. TERMINAIS (mesma família terminal)
-        if all(get_terminal(a) == get_terminal(b) for a, b in zip(seq1, seq2)):
-            return 'terminal', self.peso_equivalencias['terminal']
-        
-        # 4. VIZINHOS (todos são vizinhos)
-        if all(sao_vizinhos(a, b) for a, b in zip(seq1, seq2)):
-            return 'vizinho', self.peso_equivalencias['vizinho']
-        
-        # 5. SOMA DE DÍGITOS (mesma soma)
-        if all(get_soma_digitos(a) == get_soma_digitos(b) for a, b in zip(seq1, seq2)):
-            return 'soma', self.peso_equivalencias['soma']
-        
-        # 6. MESMA ESTRUTURA (padrão ABA, ABAB, etc)
-        if self._mesma_estrutura(seq1, seq2):
-            return 'estrutura', 0.6
-        
-        # 7. INVERSÃO (seq2 é seq1 invertida)
-        if seq1 == list(reversed(seq2)):
-            return 'inversao', 0.7
-        
-        return None, 0
-    
-    def _sao_espelhos(self, a: int, b: int) -> bool:
-        """Verifica se dois números são espelhos"""
-        return self.ESPELHOS.get(a) == b
-    
-    def _mesma_estrutura(self, seq1: List[int], seq2: List[int]) -> bool:
-        """
-        Verifica se duas sequências têm a mesma estrutura
-        
-        Exemplo:
-          [9, 22, 31] e [19, 31, 22]
-          Estrutura: A-B-C e A'-C-B (similar)
-        """
-        if len(seq1) != len(seq2):
-            return False
-        
-        # Criar padrão de repetições
-        def criar_padrao(seq):
-            padrao = []
-            mapa = {}
-            proximo_id = 0
-            
-            for num in seq:
-                if num not in mapa:
-                    mapa[num] = proximo_id
-                    proximo_id += 1
-                padrao.append(mapa[num])
-            
-            return tuple(padrao)
-        
-        padrao1 = criar_padrao(seq1)
-        padrao2 = criar_padrao(seq2)
-        
-        # Padrões idênticos
-        if padrao1 == padrao2:
-            return True
-        
-        # Padrões com mesma quantidade de repetições
-        count1 = Counter(padrao1)
-        count2 = Counter(padrao2)
-        
-        return sorted(count1.values()) == sorted(count2.values())
-    
-    def _detectar_alternancia(self, seq: List[int]) -> bool:
-        """
-        Detecta se há alternância na sequência
-        
-        Alternância: mudança de terminal, setor, cor, etc
-        """
-        if len(seq) < 2:
-            return False
-        
-        # Alternância de terminais
-        terminais = [get_terminal(n) for n in seq]
-        if len(set(terminais)) == len(terminais):  # Todos diferentes
-            return True
-        
-        # Alternância de paridade
-        paridades = [n % 2 for n in seq]
-        if all(paridades[i] != paridades[i+1] for i in range(len(paridades)-1)):
-            return True
-        
-        return False
-    
-    def _gerar_equivalentes(self, numero: int) -> List[Tuple[int, float]]:
-        """
-        Gera números equivalentes a um número dado
-        
-        Args:
-            numero: Número base
-        
-        Returns:
-            Lista de (numero_equivalente, peso)
-        """
-        equivalentes = []
-        
-        # Espelho
-        espelho = self.ESPELHOS.get(numero)
-        if espelho is not None and espelho != numero:
-            equivalentes.append((espelho, 0.8))
-        
-        # Família terminal
-        terminal = get_terminal(numero)
-        familia = get_familia_terminal(terminal)
-        for f in familia:
-            if f != numero and 0 <= f <= 36:
-                equivalentes.append((f, 0.6))
-        
-        # Vizinhos
-        vizinhos = get_vizinhos(numero, distancia=1)
-        for v in vizinhos:
-            if 0 <= v <= 36:
-                equivalentes.append((v, 0.5))
-        
-        # Mesma soma
-        nums_soma = get_numeros_mesma_soma(numero)
-        for n in nums_soma[:3]:  # Limitar a 3
-            equivalentes.append((n, 0.4))
-        
-        return equivalentes
-    
-    def _calcular_peso_temporal(self, posicao: int, total: int) -> float:
-        """
-        Calcula peso baseado na posição temporal
-        
-        Args:
-            posicao: Posição no histórico (0 = mais recente)
-            total: Tamanho total do histórico
-        
-        Returns:
-            Peso entre 0 e 1
-        """
-        # Decaimento suave
-        decay = 0.95
-        pos_normalizada = posicao / total
-        return decay ** pos_normalizada
-    
-    def get_analise_detalhada(self, history: List[int]) -> Dict:
-        """Retorna análise detalhada do ESTELAR"""
-        resultado = self.analyze(history)
-        
-        return {
-            'pattern': 'ESTELAR',
-            'historico_size': len(history),
-            'ultimos_10': history[:10],
-            'top_candidatos': resultado.get_top_n(10),
-            'total_candidatos': len(resultado.candidatos),
-            'metadata': resultado.metadata,
-            'config': {
-                'estrutura_min': self.estrutura_min,
-                'estrutura_max': self.estrutura_max,
-                'min_support': self.min_support,
-                'peso_equivalencias': self.peso_equivalencias,
-            }
+        # Precisamos de pelo menos um número antes do alvo atual
+        if idx_current + 1 >= len(numbers):
+            return None
+
+        alvo = numbers[idx_current]
+        current_before = numbers[idx_current + 1]
+
+        # Índice da próxima ocorrência do alvo no histórico (a partir do índice idx_current + 1)
+        try:
+            idx_prev = first_index_after(numbers, alvo, start=idx_current + 1)
+        except Exception:
+            # Fallback simples se o helper não estiver disponível / falhar
+            idx_prev = None
+            for i in range(idx_current + 1, len(numbers)):
+                if numbers[i] == alvo:
+                    idx_prev = i
+                    break
+
+        # Sem ocorrência anterior utilizável → sem gatilho nesse índice
+        if idx_prev is None:
+            return None
+
+        # Precisamos de dois números antes e um depois dessa ocorrência anterior
+        if idx_prev < 2 or idx_prev + 1 >= len(numbers):
+            return None
+
+        before_prev = numbers[idx_prev - 1]
+        before_prev_2 = numbers[idx_prev - 2]
+        after_prev = numbers[idx_prev + 1]
+
+        # Monta listas para comparação de contexto
+        # Lógica equivalente ao estelar_novo:
+        #   l1 = [numbers[1]]                   (aqui: current_before)
+        #   l2 = [before_check_1, numbers[check1 - 2]]
+        l1 = [current_before]
+        l2 = [before_prev, before_prev_2]
+
+        relations = find_relations_between_lists(l1, l2, self.relation_weights)
+
+        # Se não houver nenhuma relação entre os contextos, não gatilha para esse índice
+        if not relations:
+            return None
+
+        # Calcula um score base usando a melhor relação encontrada
+        base_relation_score = max((r["score"] for r in relations), default=0.0)
+        if base_relation_score <= 0:
+            base_relation_score = 1.0
+
+        # Region core: número que veio depois da ocorrência anterior do alvo
+        center = after_prev
+
+        # Monta a região de aposta conforme estelar_novo,
+        # mas corrigindo a questão de índice: usamos o valor center, não numbers[center]
+        bet_set = set()
+
+        # 1) Próprio número e ±1
+        bet_set.add(center)
+        bet_set.add(center - 1)
+        bet_set.add(center + 1)
+
+        # 2) Vizinhos de cilindro
+        neighbors = get_neighbors(center, radius=self.neighbor_radius)
+        bet_set.update(neighbors)
+
+        # 3) Espelhos
+        mirrors = get_mirrors(center)
+        bet_set.update(mirrors)
+
+        # 4) Terminais
+        same_terminal = get_numbers_by_terminal(get_terminal(center))
+        if isinstance(same_terminal, (list, tuple, set)):
+            bet_set.update(same_terminal)
+
+        # 5) Figura (com base na soma de dígitos)
+        try:
+            figure_numbers = get_figure(digit_sum(center))
+        except Exception:
+            figure_numbers = []
+
+        if isinstance(figure_numbers, (list, tuple, set)):
+            bet_set.update(figure_numbers)
+
+        # Limpa aposta: apenas números válidos 0..36
+        bet = sorted({n for n in bet_set if 0 <= n <= 36})
+
+        # Se por algum motivo não sobrou nada, aborta esse índice
+        if not bet:
+            return None
+
+        # Calcula scores por número com pesos relativos, mantendo a lógica qualitativa:
+        scores: Dict[int, float] = {}
+
+        for n in bet:
+            if n == center:
+                rel_factor = 1.0
+            elif n in {center - 1, center + 1}:
+                rel_factor = 0.9
+            elif n in neighbors:
+                rel_factor = 0.85
+            elif n in mirrors:
+                rel_factor = 0.8
+            elif isinstance(same_terminal, (list, tuple, set)) and n in same_terminal:
+                rel_factor = 0.7
+            elif isinstance(figure_numbers, (list, tuple, set)) and n in figure_numbers:
+                rel_factor = 0.6
+            else:
+                rel_factor = 0.5
+
+            scores[n] = base_relation_score * rel_factor
+
+        # Proteção no zero
+        if self.zero_protection and 0 not in scores:
+            scores[0] = base_relation_score * 0.3
+            bet.append(0)
+
+        # Normaliza scores usando a infra da BasePattern
+        scores = self.normalize_scores(scores)
+
+        metadata = {
+            "reason": "Gatilho Estelar simplificado encontrado",
+            "alvo": alvo,
+            "current_index": idx_current,
+            "alvo_previous_index": idx_prev,
+            "before_prev": before_prev,
+            "before_prev_2": before_prev_2,
+            "after_prev": after_prev,
+            "current_before": current_before,
+            "center": center,
+            "relations": relations,
+            "memory_long_used": self.memory_long,
         }
+
+        return PatternResult(
+            candidatos=bet,
+            scores=scores,
+            metadata=metadata,
+            pattern_name=self.name,
+        )

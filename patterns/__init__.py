@@ -4,10 +4,10 @@ Padrões de análise
 """
 
 from patterns.base import BasePattern, PatternResult
-from patterns.master import MasterPattern
+from patterns.master import PatternMaster
 
 __all__ = [
     'BasePattern',
     'PatternResult',
-    'MasterPattern',
+    'PatternMaster',
 ]

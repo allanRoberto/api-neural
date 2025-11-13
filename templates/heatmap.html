@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title | default('Mapa de Calor - Roleta') }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .controls {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+        }
+
+        .controls h2 {
+            color: #1e3c72;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #ff6b6b;
+            box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
+        }
+
+        .btn-analyze {
+            background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+
+        .btn-analyze:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-analyze:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #ff6b6b;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-card .number {
+            font-size: 2.5em;
+            font-weight: bold;
+            background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .label {
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        .roulette-container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+        }
+
+        .roulette-container h2 {
+            color: #1e3c72;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .roulette-wheel {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .number-cell {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 1.2em;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .number-cell:hover {
+            transform: scale(1.1);
+            z-index: 10;
+        }
+
+        .number-cell .score {
+            position: absolute;
+            bottom: 2px;
+            right: 5px;
+            font-size: 0.7em;
+            opacity: 0.8;
+        }
+
+        .wheel-svg-container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+        }
+
+        .wheel-svg-container h2 {
+            color: #1e3c72;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            text-align: center;
+        }
+
+        #wheelSvg {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .wheel-slice {
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .wheel-slice:hover {
+            opacity: 0.8;
+        }
+
+        .wheel-number {
+            pointer-events: none;
+            font-weight: bold;
+            font-size: 14px;
+            fill: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .svg-tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+        }
+
+        .svg-tooltip.show {
+            display: block;
+        }
+
+        .legend {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .legend h3 {
+            color: #1e3c72;
+            margin-bottom: 15px;
+        }
+
+        .legend-gradient {
+            height: 40px;
+            border-radius: 8px;
+            background: linear-gradient(to right, 
+                #3498db 0%,
+                #2ecc71 25%,
+                #f1c40f 50%,
+                #e67e22 75%,
+                #e74c3c 100%
+            );
+            margin-bottom: 10px;
+        }
+
+        .legend-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .top-numbers {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .top-numbers h3 {
+            color: #1e3c72;
+            margin-bottom: 20px;
+        }
+
+        .top-number-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 5px solid;
+        }
+
+        .top-number-item .rank {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #999;
+            margin-right: 15px;
+            width: 30px;
+        }
+
+        .top-number-item .number {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 20px;
+        }
+
+        .top-number-item .info {
+            flex: 1;
+        }
+
+        .top-number-item .score-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .error {
+            background: #ff4444;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .roulette-wheel {
+                grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+            }
+
+            .number-cell {
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{{ header_title | default('🔥 Mapa de Calor da Roleta') }}</h1>
+            <p>{{ header_subtitle | default('Análise de Regiões Quentes por Horário') }}</p>
+        </div>
+
+        <div class="controls">
+            <h2>⚙️ Configurações da Análise</h2>
+            <form id="heatmapForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="hour">⏰ Hora Base (0-23):</label>
+                        <input type="number" id="hour" name="hour" min="0" max="23" 
+                               value="{{ default_hour | default(17) }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="minute">⏱️ Minuto Base (0-59):</label>
+                        <input type="number" id="minute" name="minute" min="0" max="59" 
+                               value="{{ default_minute | default(40) }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="days">📅 Últimos X Dias:</label>
+                        <input type="number" id="days" name="days" min="1" max="365" 
+                               value="{{ default_days | default(30) }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="neighbors">🎯 Vizinhos (cada lado):</label>
+                        <input type="number" id="neighbors" name="neighbors" min="0" max="5" 
+                               value="{{ default_neighbors | default(2) }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="minute_range">⏲️ Intervalo Minutos:</label>
+                        <input type="number" id="minute_range" name="minute_range" min="0" max="10" 
+                               value="{{ default_minute_range | default(2) }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="direction">📍 Direção:</label>
+                        <select id="direction" name="direction" required>
+                            <option value="both" {% if default_direction == 'both' %}selected{% endif %}>
+                                ↔️ Ambos Lados
+                            </option>
+                            <option value="forward" {% if default_direction == 'forward' %}selected{% endif %}>
+                                ➡️ Só Para Frente
+                            </option>
+                            <option value="backward" {% if default_direction == 'backward' %}selected{% endif %}>
+                                ⬅️ Só Para Trás
+                            </option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn-analyze" id="btnAnalyze">
+                    🔥 Gerar Mapa de Calor
+                </button>
+            </form>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="color: #ff6b6b; font-size: 1.2em; font-weight: 600;">
+                Processando análise...
+            </p>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="results" id="results">
+            <div class="stats-cards">
+                <div class="stat-card">
+                    <div class="number" id="statTotal">0</div>
+                    <div class="label">Registros Analisados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number" id="statMax">0</div>
+                    <div class="label">Score Máximo</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number" id="statAvg">0</div>
+                    <div class="label">Score Médio</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number" id="statMinutes">-</div>
+                    <div class="label">Minutos Buscados</div>
+                </div>
+            </div>
+
+            <div class="legend">
+                <h3>📊 Legenda de Cores</h3>
+                <div class="legend-gradient"></div>
+                <div class="legend-labels">
+                    <span>❄️ Frio (Baixo)</span>
+                    <span>🟢 Morno</span>
+                    <span>🟡 Quente</span>
+                    <span>🟠 Muito Quente</span>
+                    <span>🔥 Extremamente Quente</span>
+                </div>
+            </div>
+
+            <div class="roulette-container">
+                <h2>🎰 Mapa de Calor da Roleta</h2>
+                <div class="roulette-wheel" id="rouletteWheel"></div>
+            </div>
+
+            <div class="wheel-svg-container">
+                <h2>🎯 Roda Visual de Temperatura</h2>
+                <svg id="wheelSvg" viewBox="0 0 600 600"></svg>
+            </div>
+
+            <div class="top-numbers">
+                <h3>🏆 Top 5 Números Mais Quentes</h3>
+                <div id="topNumbersList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_ENDPOINT = '/api/analise/{{ roulette_id }}/heatmap';
+
+        document.getElementById('heatmapForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                hour: parseInt(document.getElementById('hour').value),
+                minute: parseInt(document.getElementById('minute').value),
+                days: parseInt(document.getElementById('days').value),
+                neighbors: parseInt(document.getElementById('neighbors').value),
+                minute_range: parseInt(document.getElementById('minute_range').value),
+                direction: document.getElementById('direction').value
+            };
+
+            // Mostrar loading
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('results').classList.remove('show');
+            document.getElementById('error').classList.remove('show');
+            document.getElementById('btnAnalyze').disabled = true;
+
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Erro na requisição');
+                }
+
+                const data = await response.json();
+                displayHeatmap(data, formData);
+            } catch (error) {
+                showError('Erro ao buscar dados: ' + error.message);
+            } finally {
+                document.getElementById('loading').classList.remove('show');
+                document.getElementById('btnAnalyze').disabled = false;
+            }
+        });
+
+        function getColorForScore(score, maxScore) {
+            if (maxScore === 0) return '#3498db';
+            
+            const normalized = score / maxScore;
+            
+            // Gradient de cores: azul -> verde -> amarelo -> laranja -> vermelho
+            if (normalized < 0.2) {
+                return `rgb(52, 152, 219)`; // Azul
+            } else if (normalized < 0.4) {
+                return `rgb(46, 204, 113)`; // Verde
+            } else if (normalized < 0.6) {
+                return `rgb(241, 196, 15)`; // Amarelo
+            } else if (normalized < 0.8) {
+                return `rgb(230, 126, 34)`; // Laranja
+            } else {
+                return `rgb(231, 76, 60)`; // Vermelho
+            }
+        }
+
+        function displayHeatmap(data, params) {
+            if (!data.success) {
+                showError('Erro ao processar dados');
+                return;
+            }
+
+            const { scores, metadata } = data;
+            
+            // Atualizar estatísticas
+            document.getElementById('statTotal').textContent = metadata.total_records;
+            document.getElementById('statMax').textContent = metadata.max_score.toFixed(2);
+            document.getElementById('statAvg').textContent = metadata.avg_score.toFixed(2);
+            document.getElementById('statMinutes').textContent = 
+                metadata.minutes_searched.join(', ');
+
+            // Renderizar roleta
+            const wheel = document.getElementById('rouletteWheel');
+            wheel.innerHTML = '';
+
+            for (let number = 0; number <= 36; number++) {
+                const score = scores[number] || 0;
+                const color = getColorForScore(score, metadata.max_score);
+                
+                const cell = document.createElement('div');
+                cell.className = 'number-cell';
+                cell.style.backgroundColor = color;
+                cell.innerHTML = `
+                    ${number}
+                    <span class="score">${score.toFixed(1)}</span>
+                `;
+                cell.title = `Número ${number}: ${score.toFixed(2)} pontos`;
+                
+                wheel.appendChild(cell);
+            }
+
+            // Renderizar top 5
+            const topList = document.getElementById('topNumbersList');
+            topList.innerHTML = '';
+
+            metadata.top_5_numbers.forEach((item, index) => {
+                const color = getColorForScore(item.score, metadata.max_score);
+                const topItem = document.createElement('div');
+                topItem.className = 'top-number-item';
+                topItem.style.borderLeftColor = color;
+                topItem.innerHTML = `
+                    <div class="rank">#${index + 1}</div>
+                    <div class="number" style="background: ${color}">${item.number}</div>
+                    <div class="info">
+                        <div class="score-value">${item.score.toFixed(2)} pontos</div>
+                        <div style="color: #666; font-size: 0.9em;">
+                            ${((item.score / metadata.total_score) * 100).toFixed(1)}% do total
+                        </div>
+                    </div>
+                `;
+                topList.appendChild(topItem);
+            });
+
+            // Renderizar roda SVG circular
+            renderWheelSVG(scores, metadata.max_score);
+
+            // Mostrar resultados
+            document.getElementById('results').classList.add('show');
+        }
+
+        function renderWheelSVG(scores, maxScore) {
+            // Ordem da roleta europeia (física)
+            const WHEEL_ORDER = [
+                0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10,
+                5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26
+            ];
+
+            const svg = document.getElementById('wheelSvg');
+            svg.innerHTML = '';
+
+            const centerX = 300;
+            const centerY = 300;
+            const outerRadius = 250;
+            const innerRadius = 80;
+            const total = WHEEL_ORDER.length;
+            const angleStep = (2 * Math.PI) / total;
+
+            // Criar tooltip
+            let tooltip = document.getElementById('svgTooltip');
+            if (!tooltip) {
+                tooltip = document.createElement('div');
+                tooltip.id = 'svgTooltip';
+                tooltip.className = 'svg-tooltip';
+                document.body.appendChild(tooltip);
+            }
+
+            // Desenhar cada fatia
+            WHEEL_ORDER.forEach((number, index) => {
+                const score = scores[number] || 0;
+                const color = getColorForScore(score, maxScore);
+                
+                const startAngle = index * angleStep - Math.PI / 2;
+                const endAngle = startAngle + angleStep;
+
+                // Calcular pontos do arco
+                const x1Outer = centerX + outerRadius * Math.cos(startAngle);
+                const y1Outer = centerY + outerRadius * Math.sin(startAngle);
+                const x2Outer = centerX + outerRadius * Math.cos(endAngle);
+                const y2Outer = centerY + outerRadius * Math.sin(endAngle);
+
+                const x1Inner = centerX + innerRadius * Math.cos(startAngle);
+                const y1Inner = centerY + innerRadius * Math.sin(startAngle);
+                const x2Inner = centerX + innerRadius * Math.cos(endAngle);
+                const y2Inner = centerY + innerRadius * Math.sin(endAngle);
+
+                // Criar path da fatia
+                const pathData = `
+                    M ${x1Outer} ${y1Outer}
+                    A ${outerRadius} ${outerRadius} 0 0 1 ${x2Outer} ${y2Outer}
+                    L ${x2Inner} ${y2Inner}
+                    A ${innerRadius} ${innerRadius} 0 0 0 ${x1Inner} ${y1Inner}
+                    Z
+                `;
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', pathData);
+                path.setAttribute('fill', color);
+                path.setAttribute('stroke', '#fff');
+                path.setAttribute('stroke-width', '1');
+                path.classList.add('wheel-slice');
+
+                // Eventos de hover
+                path.addEventListener('mouseenter', (e) => {
+                    tooltip.innerHTML = `
+                        <strong>Número ${number}</strong><br>
+                        Score: ${score.toFixed(2)}
+                    `;
+                    tooltip.classList.add('show');
+                });
+
+                path.addEventListener('mousemove', (e) => {
+                    tooltip.style.left = (e.pageX + 10) + 'px';
+                    tooltip.style.top = (e.pageY + 10) + 'px';
+                });
+
+                path.addEventListener('mouseleave', () => {
+                    tooltip.classList.remove('show');
+                });
+
+                svg.appendChild(path);
+
+                // Adicionar número no centro da fatia
+                const midAngle = startAngle + angleStep / 2;
+                const textRadius = (outerRadius + innerRadius) / 2;
+                const textX = centerX + textRadius * Math.cos(midAngle);
+                const textY = centerY + textRadius * Math.sin(midAngle);
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', textX);
+                text.setAttribute('y', textY);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('dominant-baseline', 'middle');
+                text.classList.add('wheel-number');
+                text.textContent = number;
+
+                svg.appendChild(text);
+            });
+
+            // Adicionar centro decorativo
+            const centerCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            centerCircle.setAttribute('cx', centerX);
+            centerCircle.setAttribute('cy', centerY);
+            centerCircle.setAttribute('r', innerRadius);
+            centerCircle.setAttribute('fill', '#2c3e50');
+            centerCircle.setAttribute('stroke', '#ecf0f1');
+            centerCircle.setAttribute('stroke-width', '3');
+            svg.appendChild(centerCircle);
+
+            const centerText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            centerText.setAttribute('x', centerX);
+            centerText.setAttribute('y', centerY);
+            centerText.setAttribute('text-anchor', 'middle');
+            centerText.setAttribute('dominant-baseline', 'middle');
+            centerText.setAttribute('fill', '#ecf0f1');
+            centerText.setAttribute('font-size', '36');
+            centerText.textContent = '🎰';
+            svg.appendChild(centerText);
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+            
+            setTimeout(() => {
+                errorDiv.classList.remove('show');
+            }, 5000);
+        }
+
+        console.log('🔥 Mapa de Calor carregado!');
+        console.log('Endpoint:', API_ENDPOINT);
+    </script>
+</body>
+</html>
