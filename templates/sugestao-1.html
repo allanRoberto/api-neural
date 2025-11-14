@@ -66,9 +66,6 @@
                 <button onclick="showTab('sugestao')" id="tab-sugestao" class="tab-active pb-2 px-2 font-semibold transition-all">
                     📊 Sugestão Atual
                 </button>
-                <button onclick="showTab('aovivo')" id="tab-aovivo" class="pb-2 px-2 text-gray-400 hover:text-white font-semibold transition-all">
-                    🎥 Ao vivo
-                </button>
                 <button onclick="showTab('config')" id="tab-config" class="pb-2 px-2 text-gray-400 hover:text-white font-semibold transition-all">
                     ⚙️ Configurações
                 </button>
@@ -246,7 +243,7 @@
                         <!-- Dias de Histórico -->
                         <div>
                             <label class="text-gray-300 text-sm block mb-2">
-                                📅 Histórico (days)
+                                📅 Histórico (dias)
                                 <span class="text-gray-500 text-xs">(7-90)</span>
                             </label>
                             <input type="number" id="config-days-back" name="days_back" min="7" max="90"
@@ -588,121 +585,6 @@
 
         </div>
 
-        <!-- Tab: Ao vivo -->
-        <div id="content-aovivo" class="hidden bg-gray-800/50 backdrop-blur-sm rounded-b-xl p-6 mb-6 border border-gray-700">
-            <div class="flex flex-col lg:flex-row gap-6">
-                <!-- Coluna esquerda: login e controle -->
-                <div class="w-full lg:w-1/3 space-y-4">
-                    <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4">
-                        <div class="flex items-center justify-between mb-2">
-                            <h2 class="text-lg font-bold text-white">🎥 Ao vivo</h2>
-                            <span id="live-status" class="text-xs text-gray-400">Aguardando...</span>
-                        </div>
-
-                        <!-- Seção de login -->
-                        <div id="live-login-section" class="space-y-3">
-                            <p class="text-xs text-gray-400">
-                                Faça login na casa de apostas para assistir a roleta dentro do painel.
-                            </p>
-                            <form id="live-login-form" class="space-y-3">
-                                <div>
-                                    <label for="live-email" class="block text-xs text-gray-300 mb-1">E-mail</label>
-                                    <input
-                                        id="live-email"
-                                        type="email"
-                                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder="seu@email.com"
-                                        required
-                                    >
-                                </div>
-                                <div>
-                                    <label for="live-password" class="block text-xs text-gray-300 mb-1">Senha</label>
-                                    <input
-                                        id="live-password"
-                                        type="password"
-                                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder="Sua senha da casa"
-                                        required
-                                    >
-                                </div>
-                                <button
-                                    id="btn-live-login"
-                                    type="submit"
-                                    class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-2 rounded-lg text-sm transition-all"
-                                >
-                                    🔐 Entrar na casa de apostas
-                                </button>
-                            </form>
-                        </div>
-
-                        <!-- Seção de logado -->
-                        <div id="live-logged-section" class="hidden mt-3 text-xs text-gray-200">
-                            <div class="flex items-center justify-between mb-2">
-                                <div>
-                                    <p class="text-green-400 font-semibold">✅ Autenticado</p>
-                                    <p class="text-gray-300">
-                                        Usuário: <span id="live-user-info" class="font-semibold"></span>
-                                    </p>
-                                </div>
-                                <button
-                                    id="btn-live-logout"
-                                    type="button"
-                                    class="text-red-400 hover:text-red-300 text-xs border border-red-500/60 px-2 py-1 rounded-lg"
-                                >
-                                    Sair
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Seleção de mesa / jogo -->
-                    <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4 space-y-3">
-                        <h3 class="text-sm font-semibold text-white mb-1">🎯 Mesa / jogo</h3>
-                        <p class="text-xs text-gray-400 mb-2">
-                            Informe o <code class="bg-gray-800 px-1 rounded">gameId</code> da roleta na casa de apostas.
-                            Exemplo: <span class="text-yellow-400 font-mono">550</span>
-                        </p>
-                        <div>
-                            <label for="live-game-id" class="block text-xs text-gray-300 mb-1">ID do jogo (casino-games/:gameId)</label>
-                            <input
-                                id="live-game-id"
-                                type="text"
-                                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                value="550"
-                            >
-                        </div>
-                        <button
-                            id="btn-start-live-game"
-                            type="button"
-                            disabled
-                            class="w-full bg-green-600/90 hover:bg-green-700 text-white font-semibold py-2 rounded-lg text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                            ▶️ Carregar roleta ao vivo
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Coluna direita: iframe -->
-                <div class="w-full lg:w-2/3">
-                    <div class="relative rounded-xl border border-gray-700 overflow-hidden bg-black">
-                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none" id="live-iframe-placeholder">
-                            <p class="text-gray-500 text-sm text-center px-4">
-                                Aguardando login e carregamento do jogo.<br>
-                                Após autenticar e clicar em <strong>Carregar roleta ao vivo</strong>, o vídeo aparecerá aqui.
-                            </p>
-                        </div>
-                        <iframe
-                            id="live-iframe"
-                            src=""
-                            class="w-full h-[420px] md:h-[520px] lg:h-[560px] hidden"
-                            frameborder="0"
-                            allowfullscreen
-                        ></iframe>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Tab: Histórico -->
         <div id="content-historico" class="hidden bg-gray-800/50 backdrop-blur-sm rounded-b-xl p-6 mb-6 border border-gray-700">
             <div class="flex justify-between items-center mb-4">
@@ -914,220 +796,6 @@
         }
 
         // ==========================================
-        // AO VIVO - LOGIN NA CASA DE APOSTAS + IFRAME
-        // ==========================================
-
-        function liveSetStatus(message, type = 'info') {
-            const el = document.getElementById('live-status');
-            if (!el) return;
-
-            let colorClass = 'text-gray-300';
-            if (type === 'success') colorClass = 'text-green-400';
-            else if (type === 'warning') colorClass = 'text-yellow-400';
-            else if (type === 'danger') colorClass = 'text-red-400';
-
-            el.className = 'text-xs ' + colorClass;
-            el.textContent = message;
-        }
-
-        function liveToggleLoggedUI(isLogged, userNameOrEmail) {
-            const loginSection  = document.getElementById('live-login-section');
-            const loggedSection = document.getElementById('live-logged-section');
-            const userInfoSpan  = document.getElementById('live-user-info');
-            const startBtn      = document.getElementById('btn-start-live-game');
-
-            if (!loginSection || !loggedSection || !startBtn) return;
-
-            if (isLogged) {
-                loginSection.classList.add('hidden');
-                loggedSection.classList.remove('hidden');
-                startBtn.disabled = false;
-
-                if (userInfoSpan) {
-                    userInfoSpan.textContent = userNameOrEmail || '';
-                }
-            } else {
-                loginSection.classList.remove('hidden');
-                loggedSection.classList.add('hidden');
-                startBtn.disabled = true;
-            }
-        }
-
-        // Verifica se já existe sessão ativa na casa de apostas
-        async function verifyBookmakerLogin() {
-            try {
-                liveSetStatus('Verificando sessão na casa de apostas...', 'info');
-
-                const res = await fetch('https://auth.revesbot.com.br/api/bookmaker/verify', {
-                    method: 'GET',
-                    credentials: 'include',
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
-
-                const data = await res.json();
-
-                if (data.isConnected) {
-                    const user = data.user || {};
-                    const name = user.name || user.email || 'Usuário';
-                    liveSetStatus('Autenticado como ' + name, 'success');
-                    liveToggleLoggedUI(true, name);
-                } else {
-                    liveSetStatus('Você não está autenticado na casa de apostas.', 'warning');
-                    liveToggleLoggedUI(false);
-                }
-            } catch (err) {
-                console.error('[Ao vivo] Erro em verifyBookmakerLogin', err);
-                liveSetStatus('Erro ao verificar autenticação.', 'danger');
-                liveToggleLoggedUI(false);
-            }
-        }
-
-        // Realiza login na casa de apostas via backend Node (/api/auth/login)
-        async function doLiveLogin(email, password) {
-            const loginBtn = document.getElementById('btn-live-login');
-            if (loginBtn) loginBtn.disabled = true;
-
-            try {
-                liveSetStatus('Realizando login...', 'info');
-
-                const res = await fetch('https://auth.revesbot.com.br/api/auth/login', {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        email: email,
-                        password: password,
-                        login: email
-                    })
-                });
-
-                const data = await res.json();
-
-                if (!res.ok || (!data.isConnected && !data.access_token)) {
-                    const msg = data.error || data.message || 'Falha ao autenticar na casa de apostas.';
-                    liveSetStatus(msg, 'danger');
-                    liveToggleLoggedUI(false);
-                    return false;
-                }
-
-                liveSetStatus('Login realizado com sucesso! Validando sessão...', 'success');
-                await verifyBookmakerLogin();
-                return true;
-            } catch (err) {
-                console.error('[Ao vivo] Erro em doLiveLogin', err);
-                liveSetStatus('Erro ao realizar login.', 'danger');
-                liveToggleLoggedUI(false);
-                return false;
-            } finally {
-                if (loginBtn) loginBtn.disabled = false;
-            }
-        }
-
-        function doLiveLogout() {
-            const iframe = document.getElementById('live-iframe');
-            const placeholder = document.getElementById('live-iframe-placeholder');
-            if (iframe) {
-                iframe.src = '';
-                iframe.classList.add('hidden');
-            }
-            if (placeholder) {
-                placeholder.classList.remove('hidden');
-            }
-            liveSetStatus('Sessão local limpa. O cookie poderá continuar válido até expirar.', 'warning');
-            liveToggleLoggedUI(false);
-        }
-
-        async function startLiveGame() {
-            const gameInput = document.getElementById('live-game-id');
-            const iframe    = document.getElementById('live-iframe');
-            const startBtn  = document.getElementById('btn-start-live-game');
-            const placeholder = document.getElementById('live-iframe-placeholder');
-
-            if (!gameInput || !iframe) return;
-
-            const gameId = (gameInput.value || '').trim();
-            if (!gameId) {
-                liveSetStatus('Informe o ID do jogo (gameId).', 'warning');
-                return;
-            }
-
-            if (startBtn) startBtn.disabled = true;
-
-            try {
-                liveSetStatus('Solicitando link do jogo...', 'info');
-
-                const res = await fetch('/api/start-game/' + encodeURIComponent(gameId), {
-                    method: 'GET',
-                    credentials: 'include',
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
-
-                const data = await res.json();
-
-                if (!res.ok || !data.success || !data.link) {
-                    const msg = data.message || 'Não foi possível iniciar o jogo.';
-                    liveSetStatus(msg, 'danger');
-                    return;
-                }
-
-                iframe.src = data.link;
-                iframe.classList.remove('hidden');
-                if (placeholder) {
-                    placeholder.classList.add('hidden');
-                }
-                liveSetStatus('Jogo iniciado. Iframe carregando...', 'success');
-            } catch (err) {
-                console.error('[Ao vivo] Erro em startLiveGame', err);
-                liveSetStatus('Erro ao iniciar jogo.', 'danger');
-            } finally {
-                if (startBtn) startBtn.disabled = false;
-            }
-        }
-
-        function initAoVivo() {
-            const formLogin = document.getElementById('live-login-form');
-            const btnLogout = document.getElementById('btn-live-logout');
-            const btnStart  = document.getElementById('btn-start-live-game');
-
-            if (formLogin) {
-                formLogin.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const emailEl = document.getElementById('live-email');
-                    const passEl  = document.getElementById('live-password');
-
-                    const email = emailEl ? emailEl.value.trim() : '';
-                    const password = passEl ? passEl.value : '';
-
-                    if (!email || !password) {
-                        liveSetStatus('Preencha e-mail e senha.', 'warning');
-                        return;
-                    }
-
-                    await doLiveLogin(email, password);
-                });
-            }
-
-            if (btnLogout) {
-                btnLogout.addEventListener('click', () => {
-                    doLiveLogout();
-                });
-            }
-
-            if (btnStart) {
-                btnStart.addEventListener('click', () => {
-                    startLiveGame();
-                });
-            }
-        }
-
-        // ==========================================
         // NAVEGAÇÃO ENTRE TABS
         // ==========================================
 
@@ -1136,44 +804,24 @@
             document.getElementById('content-sugestao').classList.add('hidden');
             document.getElementById('content-config').classList.add('hidden');
             document.getElementById('content-historico').classList.add('hidden');
-            const aovivoContent = document.getElementById('content-aovivo');
-            if (aovivoContent) {
-                aovivoContent.classList.add('hidden');
-            }
 
             // Remove classe ativa de todas as tabs
             document.getElementById('tab-sugestao').classList.remove('tab-active');
             document.getElementById('tab-config').classList.remove('tab-active');
             document.getElementById('tab-historico').classList.remove('tab-active');
-            const aovivoTab = document.getElementById('tab-aovivo');
-            if (aovivoTab) {
-                aovivoTab.classList.remove('tab-active');
-            }
             
             document.getElementById('tab-sugestao').classList.add('text-gray-400');
             document.getElementById('tab-config').classList.add('text-gray-400');
             document.getElementById('tab-historico').classList.add('text-gray-400');
-            if (aovivoTab) {
-                aovivoTab.classList.add('text-gray-400');
-            }
 
             // Mostra a tab selecionada
-            const contentEl = document.getElementById('content-' + tab);
-            const tabEl = document.getElementById('tab-' + tab);
-            if (contentEl) {
-                contentEl.classList.remove('hidden');
-            }
-            if (tabEl) {
-                tabEl.classList.add('tab-active');
-                tabEl.classList.remove('text-gray-400');
-            }
+            document.getElementById('content-' + tab).classList.remove('hidden');
+            document.getElementById('tab-' + tab).classList.add('tab-active');
+            document.getElementById('tab-' + tab).classList.remove('text-gray-400');
 
-            // Ações específicas por aba
+            // Atualiza histórico se necessário
             if (tab === 'historico') {
                 exibirHistorico();
-            } else if (tab === 'aovivo') {
-                // Sempre que entrar na aba Ao vivo, verifica o status de login
-                verifyBookmakerLogin();
             }
         }
 
@@ -1231,9 +879,6 @@
             const dadosAtuais = {{ dados | tojson | safe }}; // eslint-disable-line
 
             salvarNoHistorico(dadosAtuais);
-
-            // Inicializa integrações da aba Ao vivo
-            initAoVivo();
 
             // Mostra tab de sugestão por padrão
             showTab('sugestao');
