@@ -726,6 +726,10 @@
         const CONFIG_KEY = 'analizer_config';
         const HISTORICO_KEY = 'analizer_historico';
 
+        // >>>>>> BASE DA API DA CASA (MESMO NEXT_PUBLIC_API_URL QUE VOCÊ USA NO REACT) <<<<<<
+        // Ajuste essa URL se for diferente no seu ambiente:
+        const API_BASE = 'https://auth.revesbot.com.br';
+
         // ==========================================
         // CONFIGURAÇÕES - LOCALSTORAGE
         // ==========================================
@@ -958,7 +962,7 @@
             try {
                 liveSetStatus('Verificando sessão na casa de apostas...', 'info');
 
-                const res = await fetch('https://auth.revesbot.com.br/api/bookmaker/verify', {
+                const res = await fetch(`${API_BASE}/api/bookmaker/verify`, {
                     method: 'GET',
                     credentials: 'include',
                     headers: {
@@ -992,32 +996,31 @@
             try {
                 liveSetStatus('Realizando login...', 'info');
 
-                const res = await fetch('https://auth.revesbot.com.br/api/auth/login', {
+                const res = await fetch(`${API_BASE}/api/auth/login`, {
                     method: 'POST',
                     credentials: 'include',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        email: email,
-                        password: password,
-                        login: email
+                        email,
+                        password
                     })
                 });
 
                 const data = await res.json();
 
-                if (!res.ok || (!data.isConnected && !data.access_token)) {
+                // Mesma lógica do React: res.ok && data.isConnected
+                if (res.ok && data.isConnected) {
+                    liveSetStatus('Login realizado com sucesso! Validando sessão...', 'success');
+                    await verifyBookmakerLogin();
+                    return true;
+                } else {
                     const msg = data.error || data.message || 'Falha ao autenticar na casa de apostas.';
                     liveSetStatus(msg, 'danger');
                     liveToggleLoggedUI(false);
                     return false;
                 }
-
-                liveSetStatus('Login realizado com sucesso! Validando sessão...', 'success');
-                await verifyBookmakerLogin();
-                return true;
             } catch (err) {
                 console.error('[Ao vivo] Erro em doLiveLogin', err);
                 liveSetStatus('Erro ao realizar login.', 'danger');
@@ -1061,7 +1064,7 @@
             try {
                 liveSetStatus('Solicitando link do jogo...', 'info');
 
-                const res = await fetch('/api/start-game/' + encodeURIComponent(gameId), {
+                const res = await fetch(`${API_BASE}/api/start-game/${encodeURIComponent(gameId)}`, {
                     method: 'GET',
                     credentials: 'include',
                     headers: {
