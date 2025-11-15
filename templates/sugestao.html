@@ -549,7 +549,7 @@
         <!-- Tab: Ao vivo -->
         <div id="content-aovivo" class="hidden bg-gray-800/50 backdrop-blur-sm rounded-b-xl p-6 mb-6 border border-gray-700">
             <div class="flex flex-col lg:flex-row gap-6">
-                <!-- Coluna esquerda: login e controle -->
+                <!-- Coluna esquerda: login e controles -->
                 <div class="w-full lg:w-1/3 space-y-4">
                     <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4">
                         <div class="flex items-center justify-between mb-2">
@@ -613,29 +613,19 @@
                         </div>
                     </div>
 
-                    <!-- Seleção de mesa / jogo -->
+                    <!-- Gerar nova análise -->
                     <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4 space-y-3">
-                        <h3 class="text-sm font-semibold text-white mb-1">🎯 Mesa / jogo</h3>
+                        <h3 class="text-sm font-semibold text-white mb-1">⚡ Gerar nova análise</h3>
                         <p class="text-xs text-gray-400 mb-2">
-                            Informe o <code class="bg-gray-800 px-1 rounded">gameId</code> da roleta na casa de apostas.
-                            Exemplo: <span class="text-yellow-400 font-mono">550</span>
+                            Gere uma nova análise para esta mesa usando os parâmetros de configuração atuais, sem recarregar a página.
                         </p>
-                        <div>
-                            <label for="live-game-id" class="block text-xs text-gray-300 mb-1">ID do jogo (casino-games/:gameId)</label>
-                            <input
-                                id="live-game-id"
-                                type="text"
-                                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                value="550"
-                            >
-                        </div>
                         <button
-                            id="btn-start-live-game"
+                            id="btn-gerar-analise"
                             type="button"
-                            disabled
-                            class="w-full bg-green-600/90 hover:bg-green-700 text-white font-semibold py-2 rounded-lg text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                            class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-2"
                         >
-                            ▶️ Carregar roleta ao vivo
+                            <span>⚡</span>
+                            <span>Gerar nova análise</span>
                         </button>
                     </div>
 
@@ -647,7 +637,7 @@
                         </p>
                         <div class="mb-3">
                             <p class="text-xs text-gray-400 mb-1">Principais:</p>
-                            <div class="flex flex-wrap gap-1">
+                            <div id="live-sugestao-principais" class="flex flex-wrap gap-1">
                                 {% if dados.sugestoes.principais|length > 0 %}
                                     {% for sugestao in dados.sugestoes.principais %}
                                     <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold">
@@ -662,7 +652,7 @@
                         {% if dados.sugestoes.protecoes|length > 0 %}
                         <div>
                             <p class="text-xs text-gray-400 mb-1">Proteções:</p>
-                            <div class="flex flex-wrap gap-1">
+                            <div id="live-sugestao-protecoes" class="flex flex-wrap gap-1">
                                 {% for protecao in dados.sugestoes.protecoes %}
                                 <div class="bg-gray-700 text-gray-200 w-7 h-7 rounded-full flex items-center justify-center text-xs">
                                     {{ protecao.numero }}
@@ -670,6 +660,8 @@
                                 {% endfor %}
                             </div>
                         </div>
+                        {% else %}
+                        <div id="live-sugestao-protecoes" class="flex flex-wrap gap-1"></div>
                         {% endif %}
                     </div>
                 </div>
@@ -680,7 +672,7 @@
                         <div class="absolute inset-0 flex items-center justify-center pointer-events-none" id="live-iframe-placeholder">
                             <p class="text-gray-500 text-sm text-center px-4">
                                 Aguardando login e carregamento do jogo.<br>
-                                Após autenticar e clicar em <strong>Carregar roleta ao vivo</strong>, o vídeo aparecerá aqui.
+                                Após autenticar, o vídeo será carregado automaticamente para esta mesa.
                             </p>
                         </div>
                         <iframe
@@ -718,11 +710,8 @@
         const CONFIG_KEY = 'analizer_config';
         const HISTORICO_KEY = 'analizer_historico';
 
-        // >>>>>> BASE DA API DA CASA (MESMO NEXT_PUBLIC_API_URL QUE VOCÊ USA NO REACT) <<<<<<
-        // Ajuste essa URL se for diferente no seu ambiente:
         const API_BASE = 'https://auth.revesbot.com.br';
 
-        // Slug atual e mapa slug -> gameId, baseado em roulettes_list.py
         const CURRENT_ROULETTE_SLUG = "{{ dados.roulette_id }}";
         const ROULETTE_SLUG_TO_GAME_ID = {
             "pragmatic-korean-roulette": "457",
@@ -738,6 +727,8 @@
             "pragmatic-roulette-1": "473"
         };
 
+        const SUGESTAO_JSON_URL = '/api/analise/sugestao/' + CURRENT_ROULETTE_SLUG;
+
         let liveIsLogged = false;
 
         // ==========================================
@@ -749,8 +740,6 @@
             if (configStr) {
                 return JSON.parse(configStr);
             }
-            
-            // Valores padrão
             return {
                 quantidade: 6,
                 limite_historico: 2000,
@@ -823,7 +812,6 @@
             document.getElementById('soma-pesos').textContent = soma.toFixed(2);
         }
 
-        // Atualizar soma quando os inputs mudarem
         ['config-w-master', 'config-w-estelar', 'config-w-chain', 'config-w-temporal'].forEach(id => {
             document.getElementById(id).addEventListener('input', atualizarSomaPesos);
         });
@@ -858,8 +846,8 @@
                 pesos: dados.configuracao.pesos
             };
 
-            historico.unshift(entrada); // Adiciona no início
-            historico = historico.slice(0, 20); // Mantém apenas 20
+            historico.unshift(entrada);
+            historico = historico.slice(0, 20);
 
             localStorage.setItem(HISTORICO_KEY, JSON.stringify(historico));
         }
@@ -928,7 +916,7 @@
         }
 
         // ==========================================
-        // AO VIVO - LOGIN NA CASA DE APOSTAS + IFRAME
+        // AO VIVO - LOGIN + IFRAME
         // ==========================================
 
         function getCurrentGameIdFromSlug() {
@@ -953,34 +941,24 @@
             const loginSection  = document.getElementById('live-login-section');
             const loggedSection = document.getElementById('live-logged-section');
             const userInfoSpan  = document.getElementById('live-user-info');
-            const startBtn      = document.getElementById('btn-start-live-game');
-            const gameInput     = document.getElementById('live-game-id');
 
-            if (!loginSection || !loggedSection || !startBtn) return;
+            if (!loginSection || !loggedSection) return;
 
             liveIsLogged = !!isLogged;
 
             if (isLogged) {
                 loginSection.classList.add('hidden');
                 loggedSection.classList.remove('hidden');
-                startBtn.disabled = false;
 
                 if (userInfoSpan) {
                     userInfoSpan.textContent = userNameOrEmail || '';
                 }
-
-                const autoGameId = getCurrentGameIdFromSlug();
-                if (autoGameId && gameInput) {
-                    gameInput.value = autoGameId;
-                }
             } else {
                 loginSection.classList.remove('hidden');
                 loggedSection.classList.add('hidden');
-                startBtn.disabled = true;
             }
         }
 
-        // Verifica se já existe sessão ativa na casa de apostas
         async function verifyBookmakerLogin() {
             try {
                 liveSetStatus('Verificando sessão na casa de apostas...', 'info');
@@ -1003,11 +981,6 @@
 
                     const autoGameId = getCurrentGameIdFromSlug();
                     if (autoGameId) {
-                        const gameInput = document.getElementById('live-game-id');
-                        if (gameInput) {
-                            gameInput.value = autoGameId;
-                        }
-                        // tenta carregar automaticamente o iframe
                         setTimeout(() => {
                             startLiveGame();
                         }, 300);
@@ -1023,7 +996,6 @@
             }
         }
 
-        // Realiza login na casa de apostas via backend Node (/api/auth/login)
         async function doLiveLogin(email, password) {
             const loginBtn = document.getElementById('btn-live-login');
             if (loginBtn) loginBtn.disabled = true;
@@ -1045,7 +1017,6 @@
 
                 const data = await res.json();
 
-                // Mesma lógica do React: res.ok && data.isConnected
                 if (res.ok && data.isConnected) {
                     liveSetStatus('Login realizado com sucesso! Validando sessão...', 'success');
                     await verifyBookmakerLogin();
@@ -1081,20 +1052,16 @@
         }
 
         async function startLiveGame() {
-            const gameInput = document.getElementById('live-game-id');
             const iframe    = document.getElementById('live-iframe');
-            const startBtn  = document.getElementById('btn-start-live-game');
             const placeholder = document.getElementById('live-iframe-placeholder');
 
-            if (!gameInput || !iframe) return;
+            if (!iframe) return;
 
-            const gameId = (gameInput.value || '').trim();
+            const gameId = getCurrentGameIdFromSlug();
             if (!gameId) {
-                liveSetStatus('Informe o ID do jogo (gameId).', 'warning');
+                liveSetStatus('Não foi possível determinar o gameId desta mesa.', 'warning');
                 return;
             }
-
-            if (startBtn) startBtn.disabled = true;
 
             try {
                 liveSetStatus('Solicitando link do jogo...', 'info');
@@ -1124,21 +1091,13 @@
             } catch (err) {
                 console.error('[Ao vivo] Erro em startLiveGame', err);
                 liveSetStatus('Erro ao iniciar jogo.', 'danger');
-            } finally {
-                if (startBtn) startBtn.disabled = false;
             }
         }
 
         function initAoVivo() {
             const formLogin = document.getElementById('live-login-form');
             const btnLogout = document.getElementById('btn-live-logout');
-            const btnStart  = document.getElementById('btn-start-live-game');
-            const gameInput = document.getElementById('live-game-id');
-
-            const autoGameId = getCurrentGameIdFromSlug();
-            if (gameInput && autoGameId) {
-                gameInput.value = autoGameId;
-            }
+            const btnGerar  = document.getElementById('btn-gerar-analise');
 
             if (formLogin) {
                 formLogin.addEventListener('submit', async (e) => {
@@ -1164,10 +1123,123 @@
                 });
             }
 
-            if (btnStart) {
-                btnStart.addEventListener('click', () => {
-                    startLiveGame();
+            if (btnGerar) {
+                btnGerar.addEventListener('click', () => {
+                    gerarNovaAnalise();
                 });
+            }
+        }
+
+        // ==========================================
+        // RENDER DA SUGESTÃO NA ABA AO VIVO
+        // ==========================================
+
+        function renderLiveSugestao(data) {
+            const principaisContainer = document.getElementById('live-sugestao-principais');
+            const protecoesContainer  = document.getElementById('live-sugestao-protecoes');
+
+            if (principaisContainer) {
+                const principais = (data.sugestoes && data.sugestoes.principais) || [];
+                if (!principais.length) {
+                    principaisContainer.innerHTML = '<p class="text-gray-500 text-xs">Nenhuma sugestão disponível no momento.</p>';
+                } else {
+                    principaisContainer.innerHTML = principais.map(s => {
+                        const numero = s.numero !== undefined ? s.numero : s;
+                        return `
+                            <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold">
+                                ${numero}
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+
+            if (protecoesContainer) {
+                const protecoes = (data.sugestoes && data.sugestoes.protecoes) || [];
+                if (!protecoes.length) {
+                    protecoesContainer.innerHTML = '';
+                } else {
+                    protecoesContainer.innerHTML = protecoes.map(p => {
+                        const numero = p.numero !== undefined ? p.numero : p;
+                        return `
+                            <div class="bg-gray-700 text-gray-200 w-7 h-7 rounded-full flex items-center justify-center text-xs">
+                                ${numero}
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+        }
+
+        // ==========================================
+        // GERAR NOVA ANÁLISE VIA API (SEM RELOAD)
+        // ==========================================
+
+        async function gerarNovaAnalise() {
+            const btn = document.getElementById('btn-gerar-analise');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span>⚡</span><span>Gerando análise...</span>';
+            }
+
+            const config = carregarConfiguracoes();
+            const params = new URLSearchParams({
+                quantidade: config.quantidade,
+                incluir_protecoes: config.incluir_protecoes,
+                max_protecoes: config.max_protecoes,
+                incluir_zero: config.incluir_zero,
+                limite_historico: config.limite_historico,
+                w_master: config.w_master,
+                w_estelar: config.w_estelar,
+                w_chain: config.w_chain,
+                w_temporal: config.w_temporal
+            });
+
+            if (config.target_time) {
+                params.append('target_time', config.target_time);
+            }
+            if (config.interval_minutes) {
+                params.append('interval_minutes', config.interval_minutes);
+            }
+            if (config.days_back) {
+                params.append('days_back', config.days_back);
+            }
+
+            const url = `${SUGESTAO_JSON_URL}?${params.toString()}`;
+
+            try {
+                const res = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    console.error('[Ao vivo] Erro ao gerar nova análise', data);
+                    alert(data.message || 'Erro ao gerar nova análise.');
+                    return;
+                }
+
+                if (!data || !data.sugestoes || !data.analise) {
+                    console.error('[Ao vivo] Resposta inesperada da API de análise', data);
+                    alert('Resposta inesperada da API de análise.');
+                    return;
+                }
+
+                currentAnalise = data;
+                salvarNoHistorico(currentAnalise);
+                renderLiveSugestao(currentAnalise);
+            } catch (err) {
+                console.error('[Ao vivo] Erro em gerarNovaAnalise', err);
+                alert('Erro ao gerar nova análise.');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>⚡</span><span>Gerar nova análise</span>';
+                }
             }
         }
 
@@ -1176,7 +1248,6 @@
         // ==========================================
 
         function showTab(tab) {
-            // Esconde todas as tabs
             document.getElementById('content-sugestao').classList.add('hidden');
             document.getElementById('content-config').classList.add('hidden');
             document.getElementById('content-historico').classList.add('hidden');
@@ -1185,7 +1256,6 @@
                 aovivoContent.classList.add('hidden');
             }
 
-            // Remove classe ativa de todas as tabs
             document.getElementById('tab-sugestao').classList.remove('tab-active');
             document.getElementById('tab-config').classList.remove('tab-active');
             document.getElementById('tab-historico').classList.remove('tab-active');
@@ -1201,7 +1271,6 @@
                 aovivoTab.classList.add('text-gray-400');
             }
 
-            // Mostra a tab selecionada
             const contentEl = document.getElementById('content-' + tab);
             const tabEl = document.getElementById('tab-' + tab);
             if (contentEl) {
@@ -1212,17 +1281,15 @@
                 tabEl.classList.remove('text-gray-400');
             }
 
-            // Ações específicas por aba
             if (tab === 'historico') {
                 exibirHistorico();
             } else if (tab === 'aovivo') {
-                // Sempre que entrar na aba Ao vivo, verifica o status de login
                 verifyBookmakerLogin();
             }
         }
 
         // ==========================================
-        // ATUALIZAÇÃO DE SUGESTÃO
+        // ATUALIZAÇÃO DE SUGESTÃO (RELOAD)
         // ==========================================
 
         function atualizarSugestao() {
@@ -1239,7 +1306,6 @@
                 w_temporal: config.w_temporal
             });
 
-            // Adicionar parâmetros temporais se configurados
             if (config.target_time) {
                 params.append('target_time', config.target_time);
             }
@@ -1259,12 +1325,10 @@
         // ==========================================
 
         window.addEventListener('load', () => {
-            // Carrega e preenche configurações
             const config = carregarConfiguracoes();
             preencherFormulario(config);
             atualizarSomaPesos();
             
-            // Define horário atual se não estiver configurado
             if (!config.target_time) {
                 const now = new Date();
                 const hours = String(now.getHours()).padStart(2, '0');
@@ -1272,14 +1336,14 @@
                 document.getElementById('config-target-time').value = `${hours}:${minutes}`;
             }
             
-            const dadosAtuais = {{ dados | tojson | safe }}; // eslint-disable-line
+            const dadosAtuais = {{ dados | tojson | safe }};
+            let currentAnalise = dadosAtuais;
 
-            salvarNoHistorico(dadosAtuais);
+            salvarNoHistorico(currentAnalise);
+            renderLiveSugestao(currentAnalise);
 
-            // Inicializa integrações da aba Ao vivo
             initAoVivo();
 
-            // Mostra tab de sugestão por padrão
             showTab('sugestao');
         });
     </script>
