@@ -284,6 +284,23 @@
             <!-- Sugestões Principais -->
             <div class="mb-6">
                 <h2 class="text-2xl font-bold text-white mb-4">🎲 Números Sugeridos ({{ dados.sugestoes.principais|length }})</h2>
+
+                {% if dados.analise.confianca is defined %}
+                <div class="mb-3 flex items-center gap-3">
+                    <span class="text-sm text-gray-200">
+                        Nível de confiança da previsão:
+                    </span>
+                    <div class="flex-1 h-2 rounded-full bg-gray-700 overflow-hidden" style="max-width: 260px;">
+                        <div
+                            class="h-full bg-emerald-400"
+                            style="width: {{ (dados.analise.confianca or 0) * 100 }}%;"
+                        ></div>
+                    </div>
+                    <span class="text-sm font-semibold text-emerald-300">
+                        {{ "%.0f"|format((dados.analise.confianca or 0) * 100) }}%
+                    </span>
+                </div>
+                {% endif %}
                 <div class="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
                     {% for sugestao in dados.sugestoes.principais %}
                     <div class="numero-chip bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-4 text-center shadow-lg">
@@ -519,69 +536,10 @@
                     </div>
                     <div>
                         <span class="text-gray-400">Timestamp:</span>
-                        <span class="text-white font-bold ml-2 text-xs">{{ dados.timestamp }}</span>
+                        <span class="text-white font-bold ml-2 text-xs">{{ dados.analise.confianca }}</span>
                     </div>
 
-                    <!-- Metadata TEMPORAL -->
-                    <div class="col-span-full border-t border-gray-600 pt-3 mt-2">
-                        <h4 class="text-yellow-400 font-bold mb-2">⏰ Análise Temporal</h4>
-                        
-                        <!-- DEBUG: Mostrar estrutura completa -->
-                        <div class="bg-red-900/20 border border-red-700/50 rounded p-2 mb-3 text-xs">
-                            <strong class="text-red-400">🔍 DEBUG TEMPORAL:</strong>
-                            <pre class="text-red-200 mt-1 overflow-auto">{{ dados.padroes.temporal | tojson(indent=2) }}</pre>
-                        </div>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                            <div>
-                                <span class="text-gray-400">Horário:</span>
-                                <span class="text-white font-bold ml-2">
-                                    {{ dados.padroes.temporal.time_analyzed or 'N/A' }}
-                                    {% if dados.padroes.temporal.interval_minutes %}
-                                    <span class="text-yellow-400 text-xs">(±{{ dados.padroes.temporal.interval_minutes }}min)</span>
-                                    {% endif %}
-                                </span>
-                            </div>
-                            <div>
-                                <span class="text-gray-400">Período:</span>
-                                <span class="text-white font-bold ml-2">{{ dados.padroes.temporal.days_analyzed or 0 }} dias</span>
-                            </div>
-                            <div>
-                                <span class="text-gray-400">Ocorrências:</span>
-                                <span class="text-white font-bold ml-2">{{ dados.padroes.temporal.total_occurrences or 0 }}</span>
-                            </div>
-                            <div>
-                                <span class="text-gray-400">Candidatos:</span>
-                                <span class="text-white font-bold ml-2">{{ dados.padroes.temporal.candidates_found or 0 }}</span>
-                            </div>
-                        </div>
-                        {% if dados.padroes.temporal.top_5_historical %}
-                        <div class="mt-3">
-                            <span class="text-gray-400">Top 5 (histórico temporal):</span>
-                            <div class="flex flex-wrap gap-2 mt-1">
-                                {% for item in dados.padroes.temporal.top_5_historical %}
-                                <span class="bg-yellow-600/50 text-yellow-200 px-2 py-1 rounded text-xs font-semibold">
-                                    {% if item.numero is defined and item.frequency is defined %}
-                                        {{ item.numero }} ({{ item.frequency }}x)
-                                    {% elif item.number is defined and item.frequency is defined %}
-                                        {{ item.number }} ({{ item.frequency }}x)
-                                    {% elif item.numero is defined %}
-                                        {{ item.numero }}
-                                    {% elif item.number is defined %}
-                                        {{ item.number }}
-                                    {% else %}
-                                        {{ item }}
-                                    {% endif %}
-                                </span>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        {% else %}
-                        <div class="mt-3">
-                            <span class="text-gray-400">Nenhum histórico temporal disponível</span>
-                        </div>
-                        {% endif %}
-                    </div>
+                    
 
                 </div>
             </div>
@@ -680,6 +638,40 @@
                             ▶️ Carregar roleta ao vivo
                         </button>
                     </div>
+
+                    <!-- Números atuais da sugestão -->
+                    <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4 space-y-3">
+                        <h3 class="text-sm font-semibold text-white mb-1">🎲 Números desta sugestão</h3>
+                        <p class="text-xs text-gray-400 mb-2">
+                            Visualize aqui os números sugeridos enquanto acompanha a roleta ao vivo.
+                        </p>
+                        <div class="mb-3">
+                            <p class="text-xs text-gray-400 mb-1">Principais:</p>
+                            <div class="flex flex-wrap gap-1">
+                                {% if dados.sugestoes.principais|length > 0 %}
+                                    {% for sugestao in dados.sugestoes.principais %}
+                                    <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold">
+                                        {{ sugestao.numero }}
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-gray-500 text-xs">Nenhuma sugestão disponível no momento.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if dados.sugestoes.protecoes|length > 0 %}
+                        <div>
+                            <p class="text-xs text-gray-400 mb-1">Proteções:</p>
+                            <div class="flex flex-wrap gap-1">
+                                {% for protecao in dados.sugestoes.protecoes %}
+                                <div class="bg-gray-700 text-gray-200 w-7 h-7 rounded-full flex items-center justify-center text-xs">
+                                    {{ protecao.numero }}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
 
                 <!-- Coluna direita: iframe -->
@@ -729,6 +721,24 @@
         // >>>>>> BASE DA API DA CASA (MESMO NEXT_PUBLIC_API_URL QUE VOCÊ USA NO REACT) <<<<<<
         // Ajuste essa URL se for diferente no seu ambiente:
         const API_BASE = 'https://auth.revesbot.com.br';
+
+        // Slug atual e mapa slug -> gameId, baseado em roulettes_list.py
+        const CURRENT_ROULETTE_SLUG = "{{ dados.roulette_id }}";
+        const ROULETTE_SLUG_TO_GAME_ID = {
+            "pragmatic-korean-roulette": "457",
+            "pragmatic-speed-roulette-1": "556",
+            "pragmatic-auto-roulette": "373",
+            "pragmatic-mega-roulette-brazilian": "6478",
+            "pragmatic-mega-roulette": "550",
+            "pragmatic-brazilian-roulette": "450",
+            "pragmatic-auto-mega-roulette": "543",
+            "pragmatic-immersive-roulette-deluxe": "8261",
+            "pragmatic-roulette-macao": "552",
+            "pragmatic-speed-auto-roulette": "481",
+            "pragmatic-roulette-1": "473"
+        };
+
+        let liveIsLogged = false;
 
         // ==========================================
         // CONFIGURAÇÕES - LOCALSTORAGE
@@ -921,6 +931,11 @@
         // AO VIVO - LOGIN NA CASA DE APOSTAS + IFRAME
         // ==========================================
 
+        function getCurrentGameIdFromSlug() {
+            if (!CURRENT_ROULETTE_SLUG) return null;
+            return ROULETTE_SLUG_TO_GAME_ID[CURRENT_ROULETTE_SLUG] || null;
+        }
+
         function liveSetStatus(message, type = 'info') {
             const el = document.getElementById('live-status');
             if (!el) return;
@@ -939,8 +954,11 @@
             const loggedSection = document.getElementById('live-logged-section');
             const userInfoSpan  = document.getElementById('live-user-info');
             const startBtn      = document.getElementById('btn-start-live-game');
+            const gameInput     = document.getElementById('live-game-id');
 
             if (!loginSection || !loggedSection || !startBtn) return;
+
+            liveIsLogged = !!isLogged;
 
             if (isLogged) {
                 loginSection.classList.add('hidden');
@@ -949,6 +967,11 @@
 
                 if (userInfoSpan) {
                     userInfoSpan.textContent = userNameOrEmail || '';
+                }
+
+                const autoGameId = getCurrentGameIdFromSlug();
+                if (autoGameId && gameInput) {
+                    gameInput.value = autoGameId;
                 }
             } else {
                 loginSection.classList.remove('hidden');
@@ -977,6 +1000,18 @@
                     const name = user.name || user.email || 'Usuário';
                     liveSetStatus('Autenticado como ' + name, 'success');
                     liveToggleLoggedUI(true, name);
+
+                    const autoGameId = getCurrentGameIdFromSlug();
+                    if (autoGameId) {
+                        const gameInput = document.getElementById('live-game-id');
+                        if (gameInput) {
+                            gameInput.value = autoGameId;
+                        }
+                        // tenta carregar automaticamente o iframe
+                        setTimeout(() => {
+                            startLiveGame();
+                        }, 300);
+                    }
                 } else {
                     liveSetStatus('Você não está autenticado na casa de apostas.', 'warning');
                     liveToggleLoggedUI(false);
@@ -1098,6 +1133,12 @@
             const formLogin = document.getElementById('live-login-form');
             const btnLogout = document.getElementById('btn-live-logout');
             const btnStart  = document.getElementById('btn-start-live-game');
+            const gameInput = document.getElementById('live-game-id');
+
+            const autoGameId = getCurrentGameIdFromSlug();
+            if (gameInput && autoGameId) {
+                gameInput.value = autoGameId;
+            }
 
             if (formLogin) {
                 formLogin.addEventListener('submit', async (e) => {
