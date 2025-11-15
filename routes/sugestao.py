@@ -22,6 +22,7 @@ from typing import Dict, List, Iterable, Optional
 from utils.constants import ESPELHOS
 from utils.helpers import get_vizinhos, get_espelho
 from fastapi.responses import  JSONResponse, HTMLResponse
+
 from fastapi.templating import Jinja2Templates
 
 templates = Jinja2Templates(directory="templates")
@@ -829,18 +830,22 @@ async def sugestao_ensemble(
         )
         
 
-        accept = request.headers.get("accept", "")
-        if "text/html" in accept:
-            return templates.TemplateResponse(
-                "sugestao.html",
-                {
-                    "request": request,
-                    "slug": roulette_id,
-                    "dados": resposta,
-                }
-            )
+        # Decide o tipo de resposta com base no header Accept
+        accept = (request.headers.get("accept", "") or "").lower()
 
-        return JSONResponse(content={resposta})
+        # Se for chamada via fetch (Nova análise) pedindo JSON:
+        if "application/json" in accept or "text/json" in accept:
+            return JSONResponse(content=resposta)
+
+        # Caso contrário, navegação normal do navegador → renderiza HTML
+        return templates.TemplateResponse(
+            "sugestao.html",
+            {
+                "request": request,
+                "dados": resposta
+            }
+        )
+
 
         
     except HTTPException:

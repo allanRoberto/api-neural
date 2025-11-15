@@ -617,7 +617,7 @@
                     <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4 space-y-3">
                         <h3 class="text-sm font-semibold text-white mb-1">⚡ Gerar nova análise</h3>
                         <p class="text-xs text-gray-400 mb-2">
-                            Gere uma nova análise para esta mesa usando os parâmetros de configuração atuais, sem recarregar a página.
+                            Gere uma nova análise para esta mesa.
                         </p>
                         <button
                             id="btn-gerar-analise"
@@ -660,9 +660,18 @@
                                 {% endfor %}
                             </div>
                         </div>
+                        
                         {% else %}
                         <div id="live-sugestao-protecoes" class="flex flex-wrap gap-1"></div>
                         {% endif %}
+                        <div>
+                            <p class="text-xs text-gray-400 mb-1">📊 Últimos 10 números da mesa</p>
+                            <div class="flex flex-wrap gap-2">
+                                {% for num in dados.analise.ultimos_10 %}
+                                <span class="bg-gray-600 text-white px-4 py-2 rounded-lg font-bold">{{ num }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -727,7 +736,7 @@
             "pragmatic-roulette-1": "473"
         };
 
-        const SUGESTAO_JSON_URL = '/api/analise/sugestao/' + CURRENT_ROULETTE_SLUG;
+        const SUGESTAO_JSON_URL = '/api/sugestao/' + CURRENT_ROULETTE_SLUG;
 
         let liveIsLogged = false;
 
