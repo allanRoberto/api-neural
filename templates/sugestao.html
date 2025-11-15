@@ -666,7 +666,7 @@
                         {% endif %}
                         <div>
                             <p class="text-xs text-gray-400 mb-1">📊 Últimos 10 números da mesa</p>
-                            <div class="flex flex-wrap gap-2">
+                            <div id="live-sugestao-ultimos-numeros" class="flex flex-wrap gap-2">
                                 {% for num in dados.analise.ultimos_10 %}
                                 <span class="bg-gray-600 text-white px-4 py-2 rounded-lg font-bold">{{ num }}</span>
                                 {% endfor %}
@@ -1146,6 +1146,7 @@
         function renderLiveSugestao(data) {
             const principaisContainer = document.getElementById('live-sugestao-principais');
             const protecoesContainer  = document.getElementById('live-sugestao-protecoes');
+            const ultimosNumerosContainer  = document.getElementById('live-sugestao-ultimos-numeros');
 
             if (principaisContainer) {
                 const principais = (data.sugestoes && data.sugestoes.principais) || [];
@@ -1169,6 +1170,22 @@
                     protecoesContainer.innerHTML = '';
                 } else {
                     protecoesContainer.innerHTML = protecoes.map(p => {
+                        const numero = p.numero !== undefined ? p.numero : p;
+                        return `
+                            <div class="bg-gray-700 text-gray-200 w-7 h-7 rounded-full flex items-center justify-center text-xs">
+                                ${numero}
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+
+            if (ultimosNumerosContainer) {
+                const ultimosNumeros = (data.sugestoes && data.analise.ultimos_10) || [];
+                if (!ultimosNumeros.length) {
+                    ultimosNumerosContainer.innerHTML = '';
+                } else {
+                    ultimosNumerosContainer.innerHTML = ultimosNumeros.map(p => {
                         const numero = p.numero !== undefined ? p.numero : p;
                         return `
                             <div class="bg-gray-700 text-gray-200 w-7 h-7 rounded-full flex items-center justify-center text-xs">
