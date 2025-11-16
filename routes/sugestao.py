@@ -33,6 +33,29 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+# Ordem física da roleta europeia para detecção de buracos e isolados
+WHEEL_ORDER = [
+    0, 32, 15, 19, 4, 21, 2, 25, 17, 34,
+    6, 27, 13, 36, 11, 30, 8, 23, 10, 5,
+    24, 16, 33, 1, 20, 14, 31, 9, 22, 18,
+    29, 7, 28, 12, 35, 3, 26
+]
+WHEEL_INDEX = {n: i for i, n in enumerate(WHEEL_ORDER)}
+
+def _get_wheel_neighbors(numero: int, distancia: int = 1) -> List[int]:
+    """
+    Retorna vizinhos na roda física a uma determinada distância.
+    """
+    if numero not in WHEEL_INDEX:
+        return []
+    idx = WHEEL_INDEX[numero]
+    n = len(WHEEL_ORDER)
+    vizinhos = []
+    for d in range(1, distancia + 1):
+        vizinhos.append(WHEEL_ORDER[(idx - d) % n])
+        vizinhos.append(WHEEL_ORDER[(idx + d) % n])
+    return vizinhos
+
 async def _get_historico_interno(request: Request, roulette_id: str, limit: int = 500):
     """
     Função auxiliar para buscar histórico (reutilizável)
@@ -153,6 +176,84 @@ def calcular_ensemble(
             }
     
     return dict(scores_combinados)
+
+
+
+def detectar_buracos_entre_candidatos(candidatos: List[int]) -> List[int]:
+    """
+    Detecta números que são 'buracos' entre dois vizinhos já sugeridos
+    na roda física. Ex.: 35 e 28 sugeridos → 12 é buraco.
+    """
+    if not candidatos:
+        return []
+    candidatos_set = set(candidatos)
+    buracos = set()
+
+    for numero in WHEEL_ORDER:
+        if numero in candidatos_set:
+            continue
+        # ignorar zero como buraco
+        if numero == 0:
+            continue
+        vizinhos = _get_wheel_neighbors(numero, distancia=1)
+        # se os dois vizinhos imediatos estão sugeridos, este número é buraco
+        if len(vizinhos) >= 2 and all(v in candidatos_set for v in vizinhos[:2]):
+            buracos.add(numero)
+
+    return sorted(buracos)
+
+
+def detectar_vizinhos_para_isolados(
+    candidatos: List[int],
+    scores: Dict[int, float],
+    min_score: float = 0.6,
+    depth: int = 1,
+    max_extra_por_nucleo: int = 2,
+) -> List[int]:
+    """
+    Para cada candidato 'isolado' (sem vizinhos sugeridos na roda),
+    adiciona vizinhos como proteção, desde que o núcleo seja forte o suficiente.
+
+    - min_score: score mínimo do núcleo para compensar a proteção
+    - depth: quantas casas olhar (1 = vizinhos imediatos)
+    - max_extra_por_nucleo: quantos vizinhos adicionar por núcleo
+    """
+    if not candidatos:
+        return []
+
+    candidatos_set = set(candidatos)
+    extras = set()
+
+    for numero in candidatos:
+        core_score = scores.get(numero, 0.0)
+        if core_score < min_score:
+            continue
+
+        if numero not in WHEEL_INDEX:
+            continue
+
+        idx = WHEEL_INDEX[numero]
+        n = len(WHEEL_ORDER)
+
+        vizinhos = []
+        for d in range(1, depth + 1):
+            vizinhos.append(WHEEL_ORDER[(idx - d) % n])
+            vizinhos.append(WHEEL_ORDER[(idx + d) % n])
+
+        # núcleo é isolado se nenhum vizinho está sugerido
+        if any(v in candidatos_set for v in vizinhos):
+            continue
+
+        # adiciona vizinhos imediatos como proteção
+        adicionados = 0
+        for v in vizinhos:
+            if adicionados >= max_extra_por_nucleo:
+                break
+            if v not in candidatos_set and v not in extras:
+                extras.add(v)
+                adicionados += 1
+
+    return sorted(extras)
 
 
 
@@ -367,47 +468,11 @@ def aplicar_protecoes(
     
     # 2. ESPELHOS dos candidatos
     if incluir_espelhos:
-        for num in candidatos_base:
+        for num in candidatos_base[:4]:
             if num in ESPELHOS:
                 espelho = ESPELHOS[num]
                 if espelho not in candidatos_base:
                     protecoes.add(espelho)
-    
-    # 3. VIZINHOS (1 de cada lado na roda)
-    if incluir_vizinhos:
-        for num in candidatos_base:
-            vizinhos = get_vizinhos(num, distancia=1)
-            for viz in vizinhos[:2]:  # Só os 2 mais próximos
-                if viz not in candidatos_base and viz not in protecoes:
-                    protecoes.add(viz)
-    
-    # 4. COMPLETAR RUAS (se 2 de 3 presentes)
-    ruas = [
-        [1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12],
-        [13, 14, 15], [16, 17, 18], [19, 20, 21], [22, 23, 24],
-        [25, 26, 27], [28, 29, 30], [31, 32, 33], [34, 35, 36]
-    ]
-    
-    for rua in ruas:
-        presentes = [n for n in rua if n in candidatos_base]
-        if len(presentes) == 2:
-            # 2 de 3 presentes, adiciona o faltante
-            faltante = [n for n in rua if n not in candidatos_base][0]
-            if faltante not in protecoes:
-                protecoes.add(faltante)
-    
-    # 5. FAMÍLIA DE DEZENAS (se relevante)
-    # Ex: se tem 2, 12, 22 → adiciona 32
-    for terminal in range(10):
-        familia = [n for n in [terminal, 10+terminal, 20+terminal, 30+terminal] 
-                   if 0 <= n <= 36]
-        presentes = [n for n in familia if n in candidatos_base]
-        
-        if len(presentes) >= 2:
-            for num in familia:
-                if num not in candidatos_base and num not in protecoes:
-                    protecoes.add(num)
-                    break  # Só adiciona 1 da família
     
     # Limita proteções ao máximo
     protecoes_lista = sorted(list(protecoes))[:max_protecoes]
@@ -555,7 +620,9 @@ async def sugestao_ensemble(
     w_temporal: float = Query(default=0.20, ge=0, le=1, description="Peso do TEMPORAL"),  # NOVO
     incluir_zero: bool = Query(default=True, description="Sempre incluir zero nas proteções"),
     limite_historico: int = Query(default=2000, ge=100, le=5000, description="Quantidade de histórico"),
-    # Parâmetros do TEMPORAL (NOVOS)
+    cover_holes=True,
+    cover_isolated=True,
+    isolated_min_core_score=0.6,
     target_time: str = Query(default=None, description="Horário para análise temporal (HH:MM). Se None, usa horário atual"),
     interval_minutes: int = Query(default=3, ge=1, le=30, description="Intervalo em minutos para análise temporal"),
     days_back: int = Query(default=30, ge=7, le=90, description="Quantos dias analisar no padrão temporal")
@@ -743,6 +810,45 @@ async def sugestao_ensemble(
                 'protecoes': [],
                 'total_protegido': len(candidatos_top)
             }
+
+
+        # Proteções adicionais: buracos e números isolados
+        protecoes_buracos: List[int] = []
+        protecoes_isolados: List[int] = []
+
+        if incluir_protecoes and max_protecoes > 0:
+            protecoes_set = set(protecoes_result.get('protecoes', []))
+             # 1) Cobrir buracos entre vizinhos na roda
+            if cover_holes:
+                buracos = detectar_buracos_entre_candidatos(candidatos_top)
+                for n in buracos:
+                    if len(protecoes_set) >= max_protecoes:
+                        break
+                    if n not in candidatos_top and n not in protecoes_set:
+                        protecoes_set.add(n)
+                        protecoes_buracos.append(n)
+
+            # 2) Cobrir números isolados fortes
+            if cover_isolated:
+                extras_isolados = detectar_vizinhos_para_isolados(
+                    candidatos_top,
+                    scores_ensemble,
+                    min_score=isolated_min_core_score,
+                    depth=1,
+                    max_extra_por_nucleo=2,
+                )
+                for n in extras_isolados:
+                    if len(protecoes_set) >= max_protecoes:
+                        break
+                    if n not in candidatos_top and n not in protecoes_set:
+                        protecoes_set.add(n)
+                        protecoes_isolados.append(n)
+
+            protecoes_result['protecoes'] = sorted(protecoes_set)
+            protecoes_result['total_protegido'] = len(candidatos_top) + len(protecoes_result['protecoes'])
+        else:
+            protecoes_buracos = []
+            protecoes_isolados = []
         
         # Constrói resposta
         resposta = {
@@ -810,7 +916,6 @@ async def sugestao_ensemble(
                     "master": w_master,
                     "estelar": w_estelar,
                     "chain": w_chain,
-                    "puxadas": w_puxadas,
                     "temporal": w_temporal
                 },
                 "temporal_config": {
