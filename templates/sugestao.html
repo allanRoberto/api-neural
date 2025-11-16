@@ -628,43 +628,46 @@
                             <span>Gerar nova análise</span>
                         </button>
                     </div>
-
-                    <!-- Card de execução de aposta (teste) -->
-                    <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4">
-                        <div class="flex items-center justify-between mb-2">
-                            <h2 class="text-lg font-bold text-white">⚡ Executar aposta (teste)</h2>
-                            <span id="ws-test-status" class="text-xs text-gray-400">Desconectado</span>
+                    <!-- Teste de aposta via WebSocket -->
+                    <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4 space-y-3">
+                        <div class="flex items-center justify-between mb-1">
+                            <h3 class="text-sm font-semibold text-white">⚡ Executar aposta (teste)</h3>
+                            <span class="text-[10px] text-gray-400 uppercase tracking-wide">
+                                WebSocket
+                            </span>
                         </div>
 
-                        <div class="space-y-3">
-                            <div>
-                                <label for="ws-test-url" class="block text-xs text-gray-300 mb-1">
-                                    URL do WebSocket
-                                </label>
-                                <input
-                                    id="ws-test-url"
-                                    type="text"
-                                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="wss://..."
-                                >
-                            </div>
+                        <p class="text-xs text-gray-400">
+                            Cole a URL do WebSocket, verifique se há uma sugestão carregada e clique em
+                            <span class="font-semibold text-gray-200">Executar aposta</span>.
+                        </p>
 
-                            <button
-                                id="btn-executar-aposta"
-                                type="button"
-                                class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-lg text-sm transition-all"
+                        <div class="space-y-2 mt-2">
+                            <label for="ws-url-input" class="block text-xs text-gray-300">
+                                URL do WebSocket
+                            </label>
+                            <input
+                                id="ws-url-input"
+                                type="text"
+                                placeholder="wss://exemplo.com/rota"
+                                class="w-full bg-gray-800 text-gray-100 text-xs px-3 py-2 rounded-lg border border-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                             >
-                                <span>Executar aposta</span>
-                                <span>⚡</span>
-                            </button>
-
-                            <p
-                                id="ws-test-log"
-                                class="text-[11px] text-gray-400 whitespace-pre-line max-h-40 overflow-y-auto"
-                            ></p>
                         </div>
-                    </div>
 
+                        <button
+                            id="btn-executar-aposta"
+                            type="button"
+                            class="mt-3 w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-semibold py-2.5 px-4 rounded-lg text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <span class="text-lg leading-none">⚡</span>
+                            <span>Executar aposta (teste)</span>
+                        </button>
+
+                        <div
+                            id="ws-aposta-status"
+                            class="mt-2 text-[11px] text-gray-400 min-h-[1.25rem]"
+                        ></div>
+                    </div>
 
                     <!-- Números atuais da sugestão -->
                     <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4 space-y-3">
@@ -674,7 +677,7 @@
                             <div id="live-sugestao-principais" class="flex flex-wrap gap-1">
                                 {% if dados.sugestoes.principais|length > 0 %}
                                     {% for sugestao in dados.sugestoes.principais %}
-                                    <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold">
+                                    <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold" data-numero="{{ sugestao.numero }}">
                                         {{ sugestao.numero }}
                                     </div>
                                     {% endfor %}
@@ -688,7 +691,7 @@
                             <p class="text-xs text-gray-400 mb-1">Proteções:</p>
                             <div id="live-sugestao-protecoes" class="flex flex-wrap gap-1">
                                 {% for protecao in dados.sugestoes.protecoes %}
-                                <div class="bg-gray-700 text-gray-200 w-7 h-7 rounded-full flex items-center justify-center text-xs">
+                                <div class="bg-gray-700 text-gray-200 w-7 h-7 rounded-full flex items-center justify-center text-xs" data-numero="{{ protecao.numero }}">
                                     {{ protecao.numero }}
                                 </div>
                                 {% endfor %}
@@ -1188,13 +1191,22 @@
                     principaisContainer.innerHTML = '<p class="text-gray-500 text-xs">Nenhuma sugestão disponível no momento.</p>';
                 } else {
                     principaisContainer.innerHTML = principais.map(s => {
-                        const numero = s.numero !== undefined ? s.numero : s;
-                        return `
-                            <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold">
-                                ${numero}
-                            </div>
-                        `;
-                    }).join('');
+                    const numero = s.numero !== undefined ? s.numero : s;
+                    const score = s.score !== undefined ? s.score : null;
+                    return `
+                        <div
+                            class="bg-blue-600 rounded-lg p-3 text-center"
+                            data-numero="${numero}"
+                        >
+                            <div class="text-xl font-bold text-white">${numero}</div>
+                            ${
+                                score !== null
+                                    ? `<div class="text-[11px] text-blue-100 mt-1">${(score * 100).toFixed(1)}%</div>`
+                                    : ''
+                            }
+                        </div>
+                    `;
+                }).join('');
                 }
             }
 
@@ -1408,159 +1420,129 @@
         });
     </script>
     <script>
-        // ==========================================
-// AO VIVO - EXECUÇÃO DE APOSTA (TESTE VIA WS)
-// ==========================================
-
-let wsTesteAposta = null;
-
-function coletarBetsDaSugestaoAtual() {
-    const betsSet = new Set();
-
-    const principaisContainer = document.getElementById('live-principais');
-    const protecoesContainer = document.getElementById('live-protecoes-ao-vivo');
-
-    [principaisContainer, protecoesContainer].forEach(container => {
-        if (!container) return;
-        container.querySelectorAll('div').forEach(div => {
-            const text = (div.textContent || '').trim();
-            const num = parseInt(text, 10);
-            if (!isNaN(num)) {
-                betsSet.add(num);
+        // ... seu código existente ...
+    
+        // --- TESTE DE APOSTA VIA WEBSOCKET ---
+    
+        let liveBetSocket = null;
+    
+        function getCurrentSuggestionNumbers() {
+            const principaisContainer = document.getElementById('live-sugestao-principais');
+            if (!principaisContainer) return [];
+    
+            const elementos = principaisContainer.querySelectorAll('[data-numero]');
+            const numeros = [];
+    
+            elementos.forEach(el => {
+                const raw = el.getAttribute('data-numero');
+                const n = parseInt(raw, 10);
+                if (!Number.isNaN(n)) {
+                    numeros.push(n);
+                }
+            });
+    
+            return numeros;
+        }
+    
+        function setWsBetStatus(message, type = 'info') {
+            const statusEl = document.getElementById('ws-aposta-status');
+            if (!statusEl) return;
+    
+            let color = 'text-gray-400';
+            if (type === 'error') color = 'text-red-400';
+            if (type === 'success') color = 'text-emerald-400';
+            if (type === 'warn') color = 'text-amber-300';
+    
+            statusEl.className = `mt-2 text-[11px] ${color} min-h-[1.25rem]`;
+            statusEl.textContent = message;
+        }
+    
+        function executarApostaWs() {
+            const urlInput = document.getElementById('ws-url-input');
+            if (!urlInput) return;
+    
+            const wsUrl = urlInput.value.trim();
+            if (!wsUrl) {
+                setWsBetStatus('Informe a URL do WebSocket antes de executar a aposta.', 'warn');
+                return;
+            }
+    
+            const numeros = getCurrentSuggestionNumbers();
+            if (!numeros.length) {
+                setWsBetStatus('Nenhum número de sugestão encontrado para montar a aposta.', 'warn');
+                return;
+            }
+    
+            // Fecha conexão anterior, se existir
+            if (liveBetSocket && liveBetSocket.readyState === WebSocket.OPEN) {
+                try { liveBetSocket.close(); } catch (e) {}
+            }
+    
+            setWsBetStatus('Conectando ao WebSocket...', 'info');
+            console.log('[WS-BET] Conectando em:', wsUrl);
+    
+            try {
+                liveBetSocket = new WebSocket(wsUrl);
+            } catch (err) {
+                console.error('[WS-BET] Erro ao criar WebSocket:', err);
+                setWsBetStatus('Erro ao criar conexão WebSocket. Verifique a URL.', 'error');
+                return;
+            }
+    
+            liveBetSocket.onopen = () => {
+                console.log('[WS-BET] Conectado. Enviando aposta...');
+                setWsBetStatus('Conectado. Enviando aposta...', 'info');
+    
+                // Payload de teste – aqui você adapta para o formato que o seu backend espera
+                const payload = {
+                    action: 'place_bet',
+                    origin: 'revesbot_frontend_test',
+                    roulette_id: "{{ dados.roulette_id }}",
+                    numbers: numeros,
+                    stake: 1
+                };
+    
+                try {
+                    liveBetSocket.send(JSON.stringify(payload));
+                    console.log('[WS-BET] Payload enviado:', payload);
+                    setWsBetStatus('Aposta enviada. Verifique o retorno do servidor/logs.', 'success');
+                } catch (err) {
+                    console.error('[WS-BET] Erro ao enviar aposta:', err);
+                    setWsBetStatus('Erro ao enviar a aposta pelo WebSocket.', 'error');
+                }
+            };
+    
+            liveBetSocket.onerror = (event) => {
+                console.error('[WS-BET] Erro na conexão WebSocket:', event);
+                setWsBetStatus('Erro na conexão WebSocket. Veja o console para detalhes.', 'error');
+            };
+    
+            liveBetSocket.onclose = (event) => {
+                console.log('[WS-BET] Conexão encerrada:', event.code, event.reason);
+                // Só muda o status se ainda não tiver marcado sucesso/erro mais específico
+                // Aqui deixo uma mensagem neutra:
+                if (event.code !== 1000) {
+                    setWsBetStatus('Conexão WebSocket encerrada.', 'info');
+                }
+            };
+    
+            liveBetSocket.onmessage = (event) => {
+                console.log('[WS-BET] Mensagem recebida:', event.data);
+                // Se quiser, você pode parsear e exibir algo aqui:
+                // setWsBetStatus('Resposta: ' + event.data, 'info');
+            };
+        }
+    
+        // Garante o bind do botão após o DOM estar pronto
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnExec = document.getElementById('btn-executar-aposta');
+            if (btnExec) {
+                btnExec.addEventListener('click', executarApostaWs);
             }
         });
-    });
-
-    return Array.from(betsSet);
-}
-
-// Parsers adaptados do bot.js
-function parseBetsOpenMessage(xmlMessage) {
-    const gameMatch  = xmlMessage.match(/game="([^"]+)"/);
-    const tableMatch = xmlMessage.match(/table="([^"]+)"/);
-    return (gameMatch && tableMatch) ? { game: gameMatch[1], table: tableMatch[1] } : null;
-}
-
-function generateChecksumTimestamp() {
-    return Date.now().toString();
-}
-
-function enviarApostaTeste(ws, gameInfo, bets, valorApostaCentavos) {
-    const checksum = generateChecksumTimestamp();
-
-    const betsXML = bets.map(num => {
-        const n = Number(num);
-        const betCode = n === 0 ? 2 : n + 3;
-        return `<bet amt="${valorApostaCentavos}" bc="${betCode}" ck="${checksum}" />`;
-    }).join("");
-
-    const message =
-        `<command channel="table-${gameInfo.table}" >` +
-        `<lpbet gm="roulette_desktop" gId="${gameInfo.game}" uId="ppc-browser-teste" ck="${checksum}">` +
-        betsXML +
-        `</lpbet></command>`;
-
-    console.log('[WS TEST] Enviando aposta:', { bets, valorApostaCentavos, gameInfo });
-    ws.send(message);
-}
-
-function initTesteAposta() {
-    const inputUrl = document.getElementById('ws-test-url');
-    const btnExec  = document.getElementById('btn-executar-aposta');
-    const statusEl = document.getElementById('ws-test-status');
-    const logEl    = document.getElementById('ws-test-log');
-
-    if (!inputUrl || !btnExec || !statusEl || !logEl) {
-        return;
-    }
-
-    function setStatus(text) {
-        statusEl.textContent = text;
-    }
-
-    function log(msg) {
-        const timestamp = new Date().toLocaleTimeString();
-        logEl.textContent += `[${timestamp}] ${msg}\n`;
-        logEl.scrollTop = logEl.scrollHeight;
-    }
-
-    btnExec.addEventListener('click', () => {
-        const url = (inputUrl.value || '').trim();
-        if (!url) {
-            alert('Informe a URL do WebSocket.');
-            return;
-        }
-
-        const bets = coletarBetsDaSugestaoAtual();
-        if (!bets.length) {
-            alert('Nenhum número encontrado na sugestão atual para apostar.');
-            return;
-        }
-
-        if (wsTesteAposta) {
-            try {
-                wsTesteAposta.close();
-            } catch (e) {}
-            wsTesteAposta = null;
-        }
-
-        log('Conectando a ' + url);
-        setStatus('Conectando...');
-
-        try {
-            wsTesteAposta = new WebSocket(url);
-        } catch (err) {
-            console.error('[WS TEST] Erro ao criar WebSocket:', err);
-            log('Erro ao criar WebSocket: ' + err.message);
-            setStatus('Erro');
-            return;
-        }
-
-        wsTesteAposta.onopen = () => {
-            log('Conexão aberta. Aguardando <betsopen>...');
-            setStatus('Conectado');
-        };
-
-        wsTesteAposta.onmessage = (event) => {
-            const message = typeof event.data === 'string'
-                ? event.data
-                : '';
-
-            if (!message) return;
-
-            if (message.includes('<betsopen') || message.includes('<betsclosingsoon')) {
-                log('Mensagem de abertura de apostas detectada.');
-
-                const gameInfo = parseBetsOpenMessage(message);
-                if (!gameInfo) {
-                    log('Não foi possível extrair game/table da mensagem.');
-                    return;
-                }
-
-                // valor em centavos (ex: 100 = R$ 1,00)
-                const valorApostaCentavos = 100;
-
-                log(`Enviando aposta de teste (${valorApostaCentavos} centavos) nos números: ${bets.join(', ')}`);
-                enviarApostaTeste(wsTesteAposta, gameInfo, bets, valorApostaCentavos);
-            }
-        };
-
-        wsTesteAposta.onerror = (event) => {
-            console.error('[WS TEST] Erro no WebSocket:', event);
-            log('Erro no WebSocket. Veja o console.');
-            setStatus('Erro');
-        };
-
-        wsTesteAposta.onclose = () => {
-            log('Conexão fechada.');
-            setStatus('Desconectado');
-        };
-    });
-}
-
-// Garante que o init rode quando o DOM estiver pronto
-document.addEventListener('DOMContentLoaded', initTesteAposta);
-
+    
+        // ... seu código existente ...
     </script>
+    
 </body>
 </html>
