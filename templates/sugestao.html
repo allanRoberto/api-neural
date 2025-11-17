@@ -629,38 +629,27 @@
                         </button>
                     </div>
                     <!-- Teste de aposta via WebSocket -->
+                    <!-- Executar aposta via extensão (usa WebSocket já aberto da mesa) -->
                     <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4 space-y-3">
                         <div class="flex items-center justify-between mb-1">
-                            <h3 class="text-sm font-semibold text-white">⚡ Executar aposta (teste)</h3>
+                            <h3 class="text-sm font-semibold text-white">⚡ Executar aposta</h3>
                             <span class="text-[10px] text-gray-400 uppercase tracking-wide">
-                                WebSocket
+                                via extensão
                             </span>
                         </div>
 
                         <p class="text-xs text-gray-400">
-                            Cole a URL do WebSocket, verifique se há uma sugestão carregada e clique em
-                            <span class="font-semibold text-gray-200">Executar aposta</span>.
+                            Usa os números da sugestão atual e envia um comando de aposta para a extensão,
+                            que aproveita o WebSocket já aberto na mesa (nenhum segundo WebSocket é criado).
                         </p>
-
-                        <div class="space-y-2 mt-2">
-                            <label for="ws-url-input" class="block text-xs text-gray-300">
-                                URL do WebSocket
-                            </label>
-                            <input
-                                id="ws-url-input"
-                                type="text"
-                                placeholder="wss://exemplo.com/rota"
-                                class="w-full bg-gray-800 text-gray-100 text-xs px-3 py-2 rounded-lg border border-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                            >
-                        </div>
 
                         <button
                             id="btn-executar-aposta"
                             type="button"
-                            class="mt-3 w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-semibold py-2.5 px-4 rounded-lg text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            class="mt-2 w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-semibold py-2.5 px-4 rounded-lg text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <span class="text-lg leading-none">⚡</span>
-                            <span>Executar aposta (teste)</span>
+                            <span>Executar aposta</span>
                         </button>
 
                         <div
@@ -1420,19 +1409,18 @@
         });
     </script>
     <script>
-        // ... seu código existente ...
     
-        // --- TESTE DE APOSTA VIA WEBSOCKET ---
     
-        let liveBetSocket = null;
-    
+        // --- TESTE DE APOSTA VIA WEBSOCKET (via iframe + extensão) ---
+
+        // Lê os números da sugestão atual na aba Ao vivo (divs com data-numero)
         function getCurrentSuggestionNumbers() {
             const principaisContainer = document.getElementById('live-sugestao-principais');
             if (!principaisContainer) return [];
-    
+
             const elementos = principaisContainer.querySelectorAll('[data-numero]');
             const numeros = [];
-    
+
             elementos.forEach(el => {
                 const raw = el.getAttribute('data-numero');
                 const n = parseInt(raw, 10);
@@ -1440,108 +1428,69 @@
                     numeros.push(n);
                 }
             });
-    
+
             return numeros;
         }
-    
+
+        // Atualiza a mensagenzinha de status abaixo do botão "Executar aposta"
         function setWsBetStatus(message, type = 'info') {
             const statusEl = document.getElementById('ws-aposta-status');
             if (!statusEl) return;
-    
+
             let color = 'text-gray-400';
-            if (type === 'error') color = 'text-red-400';
+            if (type === 'error')   color = 'text-red-400';
             if (type === 'success') color = 'text-emerald-400';
-            if (type === 'warn') color = 'text-amber-300';
-    
-            statusEl.className = `mt-2 text-[11px] ${color} min-h-[1.25rem]`;
+            if (type === 'warn')    color = 'text-amber-300';
+
+            statusEl.className = `mt-2 text-[11px] min-h-[1.25rem] ${color}`;
             statusEl.textContent = message;
         }
-    
-        function executarApostaWs() {
-            const urlInput = document.getElementById('ws-url-input');
-            if (!urlInput) return;
-    
-            const wsUrl = urlInput.value.trim();
-            if (!wsUrl) {
-                setWsBetStatus('Informe a URL do WebSocket antes de executar a aposta.', 'warn');
-                return;
-            }
-    
+
+        // Envia o comando de aposta para o iframe, que a extensão intercepta e envia pelo WebSocket já aberto
+        function executarApostaViaIframe() { 
             const numeros = getCurrentSuggestionNumbers();
             if (!numeros.length) {
                 setWsBetStatus('Nenhum número de sugestão encontrado para montar a aposta.', 'warn');
                 return;
             }
-    
-            // Fecha conexão anterior, se existir
-            if (liveBetSocket && liveBetSocket.readyState === WebSocket.OPEN) {
-                try { liveBetSocket.close(); } catch (e) {}
-            }
-    
-            setWsBetStatus('Conectando ao WebSocket...', 'info');
-            console.log('[WS-BET] Conectando em:', wsUrl);
-    
-            try {
-                liveBetSocket = new WebSocket(wsUrl);
-            } catch (err) {
-                console.error('[WS-BET] Erro ao criar WebSocket:', err);
-                setWsBetStatus('Erro ao criar conexão WebSocket. Verifique a URL.', 'error');
+
+            const iframe = document.getElementById('live-iframe');
+            if (!iframe || !iframe.contentWindow) {
+                setWsBetStatus('Iframe da mesa não encontrado ou ainda não carregado.', 'error');
                 return;
             }
-    
-            liveBetSocket.onopen = () => {
-                console.log('[WS-BET] Conectado. Enviando aposta...');
-                setWsBetStatus('Conectado. Enviando aposta...', 'info');
-    
-                // Payload de teste – aqui você adapta para o formato que o seu backend espera
-                const payload = {
-                    action: 'place_bet',
-                    origin: 'revesbot_frontend_test',
-                    roulette_id: "{{ dados.roulette_id }}",
-                    numbers: numeros,
-                    stake: 1
-                };
-    
-                try {
-                    liveBetSocket.send(JSON.stringify(payload));
-                    console.log('[WS-BET] Payload enviado:', payload);
-                    setWsBetStatus('Aposta enviada. Verifique o retorno do servidor/logs.', 'success');
-                } catch (err) {
-                    console.error('[WS-BET] Erro ao enviar aposta:', err);
-                    setWsBetStatus('Erro ao enviar a aposta pelo WebSocket.', 'error');
-                }
+
+            const payload = {
+                action: 'place_bet',
+                origin: 'revesbot_frontend',
+                roulette_id: "{{ dados.roulette_id }}",
+                numbers: numeros
+                // se depois você precisar: stake, layout, etc. adiciona aqui
             };
-    
-            liveBetSocket.onerror = (event) => {
-                console.error('[WS-BET] Erro na conexão WebSocket:', event);
-                setWsBetStatus('Erro na conexão WebSocket. Veja o console para detalhes.', 'error');
-            };
-    
-            liveBetSocket.onclose = (event) => {
-                console.log('[WS-BET] Conexão encerrada:', event.code, event.reason);
-                // Só muda o status se ainda não tiver marcado sucesso/erro mais específico
-                // Aqui deixo uma mensagem neutra:
-                if (event.code !== 1000) {
-                    setWsBetStatus('Conexão WebSocket encerrada.', 'info');
-                }
-            };
-    
-            liveBetSocket.onmessage = (event) => {
-                console.log('[WS-BET] Mensagem recebida:', event.data);
-                // Se quiser, você pode parsear e exibir algo aqui:
-                // setWsBetStatus('Resposta: ' + event.data, 'info');
-            };
+
+            try {
+                iframe.contentWindow.postMessage(
+                    {
+                        type: 'RB_PLACE_BET',
+                        payload
+                    },
+                    '*' // se quiser deixar mais seguro, troca por 'https://DOMINIO-DA-CASA'
+                );
+                console.log('[RevesBot] RB_PLACE_BET enviado para iframe:', payload);
+                setWsBetStatus('Comando de aposta enviado para a mesa. Veja o console da mesa/extensão.', 'success');
+            } catch (err) {
+                console.error('[RevesBot] Erro ao enviar RB_PLACE_BET:', err);
+                setWsBetStatus('Erro ao enviar comando de aposta para a mesa.', 'error');
+            }
         }
-    
-        // Garante o bind do botão após o DOM estar pronto
+        
+                // Garante o bind do botão após o DOM estar pronto
         document.addEventListener('DOMContentLoaded', () => {
             const btnExec = document.getElementById('btn-executar-aposta');
             if (btnExec) {
-                btnExec.addEventListener('click', executarApostaWs);
+                btnExec.addEventListener('click', executarApostaViaIframe);
             }
         });
-    
-        // ... seu código existente ...
     </script>
     
 </body>
