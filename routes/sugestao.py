@@ -13,7 +13,7 @@ import logging
 from patterns.puxadas import PuxadasPattern 
 from patterns.master import PatternMaster
 from patterns.estelar import PatternEstelar
-from patterns.chain import ChainAnalyzer
+from patterns.chain import ChainPattern
 from patterns.temporal import TemporalPattern
 
 from collections import defaultdict
@@ -158,7 +158,7 @@ def calcular_ensemble(
     
     # CHAIN
     for num, score in resultado_chain.scores.items():
-        scores_combinados[num] += w_chain * score
+        scores_combinados[num] += w_chain * score * 4
     
 
     
@@ -721,7 +721,7 @@ async def sugestao_ensemble(
         
         
         logger.info("Executando CHAIN...")
-        chain = ChainAnalyzer(config=config_chain)
+        chain = ChainPattern()
         resultado_chain = chain.analyze(numeros)
 
 
@@ -896,7 +896,7 @@ async def sugestao_ensemble(
                     "inversoes": resultado_chain.metadata.get('inversoes_detectadas', 0),
                     "compensacoes": resultado_chain.metadata.get('compensacoes_detectadas', 0),
                     "top_pares": resultado_chain.metadata.get('top_pares', [])[:5],
-                    "top_3": [num for num, _ in resultado_chain.get_top_n(5)]
+                    "top_3": [num for num, _ in resultado_chain.get_top_n(18)]
                 },
                 
                 "temporal": {
