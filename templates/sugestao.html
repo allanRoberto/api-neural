@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analizer Master + Estelar + Chain + Puxadas + Temporal</title>
+    <title>Analizer Estelar + Chain + Temporal + Quente</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -54,7 +54,7 @@
         <!-- Header -->
         <div class="text-center mb-8">
             <h1 class="text-4xl font-bold text-white mb-2">
-                🎯 Analizer Master + Estelar + Chain + Puxadas + Temporal
+                🎯 Analizer Estelar + Chain + Temporal + Quente
             </h1>
             <p class="text-gray-400">Sistema Ensemble de Sugestões para Roleta</p>
             <p class="text-gray-500 text-sm mt-2">{{ dados.roulette_id }}</p>
@@ -147,19 +147,7 @@
                     <p class="text-gray-400 text-sm mb-3">
                         💡 Ajuste o peso de cada padrão (0.0 a 1.0). Os pesos serão normalizados automaticamente.
                     </p>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <!-- Peso MASTER -->
-                        <div>
-                            <label class="text-gray-300 text-sm block mb-2">
-                                🎯 Peso MASTER
-                                <span class="text-gray-500 text-xs">(0.0 - 1.0)</span>
-                            </label>
-                            <input type="number" id="config-w-master" name="w_master" min="0" max="1" step="0.05"
-                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
-                                   value="0.25">
-                            <p class="text-xs text-gray-500 mt-1">Padrões exatos e repetições</p>
-                        </div>
-
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <!-- Peso ESTELAR -->
                         <div>
                             <label class="text-gray-300 text-sm block mb-2">
@@ -168,7 +156,7 @@
                             </label>
                             <input type="number" id="config-w-estelar" name="w_estelar" min="0" max="1" step="0.05"
                                    class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
-                                   value="0.20">
+                                   value="0.25">
                             <p class="text-xs text-gray-500 mt-1">Equivalências e substituições</p>
                         </div>
 
@@ -180,10 +168,9 @@
                             </label>
                             <input type="number" id="config-w-chain" name="w_chain" min="0" max="1" step="0.05"
                                    class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
-                                   value="0.20">
+                                   value="0.25">
                             <p class="text-xs text-gray-500 mt-1">Cadeias comportamentais</p>
                         </div>
-
 
                         <!-- Peso TEMPORAL -->
                         <div>
@@ -193,8 +180,20 @@
                             </label>
                             <input type="number" id="config-w-temporal" name="w_temporal" min="0" max="1" step="0.05"
                                    class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
-                                   value="0.15">
+                                   value="0.25">
                             <p class="text-xs text-gray-500 mt-1">Análise por horário</p>
+                        </div>
+
+                        <!-- Peso QUENTE -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                🔥 Peso QUENTE
+                                <span class="text-gray-500 text-xs">(0.0 - 1.0)</span>
+                            </label>
+                            <input type="number" id="config-w-quente" name="w_quente" min="0" max="1" step="0.05"
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
+                                   value="0.25">
+                            <p class="text-xs text-gray-500 mt-1">Números mais ativos</p>
                         </div>
                     </div>
 
@@ -215,20 +214,21 @@
                             <strong>📊 Análise Temporal:</strong> Este padrão analisa números que apareceram em horários similares nos dias anteriores.
                         </p>
                         <p class="text-yellow-300/80 text-xs">
-                            O sistema busca padrões de horário no histórico e identifica quais números tendem a aparecer em momentos específicos do dia.
+                            O sistema busca padrões de horário no histórico e identifica quais números tendem a aparecer em momentos específicos do dia, usando um offset em minutos em relação ao horário atual.
                         </p>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <!-- Horário Alvo -->
+                        <!-- Offset de minutos -->
                         <div>
                             <label class="text-gray-300 text-sm block mb-2">
-                                ⏰ Horário Alvo (HH:MM)
+                                🕒 Offset (minutos)
+                                <span class="text-gray-500 text-xs">(-60 a 60)</span>
                             </label>
-                            <input type="time" id="config-target-time" name="target_time"
+                            <input type="number" id="config-minute-offset" name="minute_offset" min="-60" max="60"
                                    class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-yellow-500 focus:outline-none"
-                                   value="">
-                            <p class="text-xs text-gray-500 mt-1">Deixe em branco para usar horário atual</p>
+                                   value="3">
+                            <p class="text-xs text-gray-500 mt-1">Minutos em relação ao horário atual (ex: -5, +3).</p>
                         </div>
 
                         <!-- Intervalo de Análise -->
@@ -281,32 +281,51 @@
                     {% endfor %}
                 </div>
             </div>
+            {% set conf_global = dados.analise.confianca.valor
+                if dados.analise.confianca is mapping and dados.analise.confianca.valor is defined
+                else (dados.analise.confianca
+                    if dados.analise.confianca is number
+                    else 0)
+            %}
+            
+            <div class="mb-3 flex items-center gap-3">
+              <span class="text-sm text-gray-200">Nível de confiança:</span>
+            
+              <div class="flex-1 h-2 rounded-full bg-gray-700 overflow-hidden max-w-[260px]">
+                <div
+                  class="h-full bg-emerald-400 transition-all"
+                  style="width: {{ conf_global * 100 }}%;"
+                ></div>
+              </div>
+            
+              <span class="text-sm font-semibold text-emerald-300">
+                {{ "%.0f"|format(conf_global * 100) }}%
+              </span>
+            </div>
             <!-- Sugestões Principais -->
             <div class="mb-6">
                 <h2 class="text-2xl font-bold text-white mb-4">🎲 Números Sugeridos ({{ dados.sugestoes.principais|length }})</h2>
 
-                {% if dados.analise.confianca is defined %}
-                <div class="mb-3 flex items-center gap-3">
-                    <span class="text-sm text-gray-200">
-                        Nível de confiança da previsão:
-                    </span>
-                    <div class="flex-1 h-2 rounded-full bg-gray-700 overflow-hidden" style="max-width: 260px;">
-                        <div
-                            class="h-full bg-emerald-400"
-                            style="width: {{ (dados.analise.confianca or 0) * 100 }}%;"
-                        ></div>
-                    </div>
-                    <span class="text-sm font-semibold text-emerald-300">
-                        {{ "%.0f"|format((dados.analise.confianca or 0) * 100) }}%
-                    </span>
-                </div>
-                {% endif %}
                 <div class="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
                     {% for sugestao in dados.sugestoes.principais %}
                     <div class="numero-chip bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-4 text-center shadow-lg">
                         <div class="text-3xl font-bold text-white">{{ sugestao.numero }}</div>
                         <div class="text-xs text-blue-200 mt-1">{{ "%.1f"|format(sugestao.score * 100) }}%</div>
+                        {% set conf_num = (sugestao.confianca if sugestao.confianca is defined else sugestao.score) %}
+
+                        <div class="mt-2 h-1.5 w-full bg-blue-900/60 rounded-full overflow-hidden">
+                        <div
+                            class="h-full bg-emerald-300 transition-all"
+                            style="width: {{ (conf_num or 0) * 100 }}%;"
+                        ></div>
+                        </div>
+
+                        <div class="text-[11px] text-blue-100 mt-1">
+                        {{ "%.0f"|format((conf_num or 0) * 100) }}%
+                        </div>
+                    
                     </div>
+                    
                     {% endfor %}
                 </div>
             </div>
@@ -331,12 +350,12 @@
                 <h2 class="text-xl font-bold text-white mb-4">🤝 Consenso entre Padrões</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     
-                    <!-- Total (5/5) -->
+                    <!-- Total -->
                     {% if dados.analise.consenso.consenso_total|length > 0 %}
                     <div class="consenso-total rounded-xl p-4 shadow-lg">
                         <div class="flex items-center gap-2 mb-2">
                             <span class="text-2xl">🌟</span>
-                            <h3 class="text-white font-bold">Total (5/5 padrões)</h3>
+                            <h3 class="text-white font-bold">Total (todos os padrões)</h3>
                         </div>
                         <div class="flex flex-wrap gap-2 mt-3">
                             {% for num in dados.analise.consenso.consenso_total %}
@@ -345,47 +364,13 @@
                         </div>
                     </div>
                     {% endif %}
-
-                    <!-- Quádruplo (4/5) -->
-                    {% if dados.analise.consenso.consenso_quadruplo %}
-                    <div class="bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl p-4 shadow-lg">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-2xl">💎</span>
-                            <h3 class="text-white font-bold">Quádruplo (4/5)</h3>
-                        </div>
-                        <div class="flex flex-wrap gap-2 mt-3">
-                            {% for tipo, numeros in dados.analise.consenso.consenso_quadruplo.items() %}
-                                {% for num in numeros %}
-                                <span class="bg-white/20 text-white px-3 py-1 rounded-full font-bold">{{ num }}</span>
-                                {% endfor %}
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Triplo (3/5) -->
-                    {% if dados.analise.consenso.consenso_triplo %}
-                    <div class="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-xl p-4 shadow-lg">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-2xl">🔷</span>
-                            <h3 class="text-white font-bold">Triplo (3/5)</h3>
-                        </div>
-                        <div class="flex flex-wrap gap-2 mt-3">
-                            {% for tipo, numeros in dados.analise.consenso.consenso_triplo.items() %}
-                                {% for num in numeros %}
-                                <span class="bg-white/20 text-white px-3 py-1 rounded-full font-bold">{{ num }}</span>
-                                {% endfor %}
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Duplo (2/5) -->
+                
+                    <!-- Duplo -->
                     {% if dados.analise.consenso.consenso_duplo %}
                     <div class="consenso-duplo rounded-xl p-4 shadow-lg">
                         <div class="flex items-center gap-2 mb-2">
                             <span class="text-2xl">🔹</span>
-                            <h3 class="text-white font-bold">Duplo (2/5)</h3>
+                            <h3 class="text-white font-bold">Duplo (2 padrões)</h3>
                         </div>
                         <div class="flex flex-wrap gap-2 mt-3">
                             {% for tipo, numeros in dados.analise.consenso.consenso_duplo.items() %}
@@ -403,31 +388,31 @@
             <!-- Análise Individual -->
             <div class="mb-6">
                 <h2 class="text-xl font-bold text-white mb-4">🔍 Análise Individual dos Padrões</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     
-                    <!-- MASTER -->
-                    <div class="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
-                        <h3 class="text-lg font-bold text-blue-400 mb-3">🎯 MASTER</h3>
-                        <p class="text-xs text-gray-400 mb-2">Padrões: {{ dados.padroes.master.padroes_encontrados }}</p>
-                        <div class="flex flex-wrap gap-2">
-                            {% for num in dados.padroes.master.top_3 %}
-                            <span class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
-                            {% endfor %}
-                            {% if dados.padroes.master.top_3|length == 0 %}
-                            <p class="text-gray-400 text-sm">Nenhum padrão detectado</p>
-                            {% endif %}
-                        </div>
-                    </div>
-
                     <!-- ESTELAR -->
                     <div class="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
                         <h3 class="text-lg font-bold text-purple-400 mb-3">⭐ ESTELAR</h3>
                         <p class="text-xs text-gray-400 mb-2">Equivalentes: {{ dados.padroes.estelar.padroes_equivalentes }}</p>
                         <div class="flex flex-wrap gap-2">
-                            {% for num in dados.padroes.estelar.top_3 %}
+                            {% for num in dados.padroes.estelar.top_18 %}
                             <span class="bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
                             {% endfor %}
-                            {% if dados.padroes.estelar.top_3|length == 0 %}
+                            {% if dados.padroes.estelar.top_18|length == 0 %}
+                            <p class="text-gray-400 text-sm">Nenhum padrão detectado</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+
+                    <!-- ESTELAR -->
+                    <div class="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+                        <h3 class="text-lg font-bold text-orange-400 mb-3">🔄 Comportamental</h3>
+                        <div class="flex flex-wrap gap-2">
+                            {% for num in dados.padroes.comportamental.top_18 %}
+                            <span class="bg-orange-700 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
+                            {% endfor %}
+                            {% if dados.padroes.comportamental.top_18|length == 0 %}
                             <p class="text-gray-400 text-sm">Nenhum padrão detectado</p>
                             {% endif %}
                         </div>
@@ -441,16 +426,14 @@
                             Inversões: {{ dados.padroes.chain.inversoes }}
                         </p>
                         <div class="flex flex-wrap gap-2">
-                            {% for num in dados.padroes.chain.top_3 %}
+                            {% for num in dados.padroes.chain.top_18 %}
                             <span class="bg-green-600 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
                             {% endfor %}
-                            {% if dados.padroes.chain.top_3|length == 0 %}
+                            {% if dados.padroes.chain.top_18|length == 0 %}
                             <p class="text-gray-400 text-sm">Nenhum padrão detectado</p>
                             {% endif %}
                         </div>
                     </div>
-
-
 
                     <!-- TEMPORAL -->
                     <div class="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
@@ -461,27 +444,42 @@
                             (±{{ dados.padroes.temporal.interval_minutes }}min)
                             {% endif %}
                             <br>
-                            Candidatos: {{ dados.padroes.temporal.candidates_found or 0 }} | 
+                            Candidatos: {{ dados.padroes.temporal.candidates or 0 }} | 
                             Ocorrências: {{ dados.padroes.temporal.total_occurrences or 0 }}
                         </p>
                         <div class="flex flex-wrap gap-2">
-                            {% if dados.padroes.temporal.top_5_historical %}
-                                {% for item in dados.padroes.temporal.top_5_historical[:18] %}
-                                <span class="bg-yellow-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                                    {% if item.numero is defined %}
-                                        {{ item.numero }}
-                                    {% elif item.number is defined %}
-                                        {{ item.number }}
-                                    {% else %}
-                                        {{ item }}
-                                    {% endif %}
-                                </span>
-                                {% endfor %}
-                            {% else %}
-                            <p class="text-gray-400 text-sm">Nenhum dado temporal encontrado</p>
+                            {% for item in dados.padroes.temporal.top_18 %}
+                            <span class="bg-yellow-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                                {% if item.numero is defined %}
+                                    {{ item.numero }}
+                                {% elif item.number is defined %}
+                                    {{ item.number }}
+                                {% else %}
+                                    {{ item }}
+                                {% endif %}
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- QUENTE -->
+                    {% if dados.padroes.quente is defined %}
+                    <div class="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+                        <h3 class="text-lg font-bold text-red-400 mb-3">🔥 QUENTE</h3>
+                        <p class="text-xs text-gray-400 mb-2">
+                            Janela: {{ dados.padroes.quente.janela or '?' }} |
+                            Limite: {{ dados.padroes.quente.limite_quente or '?' }}
+                        </p>
+                        <div class="flex flex-wrap gap-2">
+                            {% for num in dados.padroes.quente.top_18 %}
+                            <span class="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
+                            {% endfor %}
+                            {% if dados.padroes.quente.top_18|length == 0 %}
+                            <p class="text-gray-400 text-sm">Nenhum número quente detectado</p>
                             {% endif %}
                         </div>
                     </div>
+                    {% endif %}
 
                 </div>
             </div>
@@ -503,8 +501,6 @@
             </div>
             {% endif %}
 
-            
-
             <!-- Metadata -->
             <div class="bg-gray-700/30 rounded-xl p-4 border border-gray-600">
                 <h3 class="text-lg font-bold text-gray-300 mb-3">📋 Informações da Análise</h3>
@@ -524,10 +520,10 @@
                     <div>
                         <span class="text-gray-400">Pesos:</span>
                         <span class="text-white font-bold ml-2">
-                            M:{{ "%.2f"|format(dados.configuracao.pesos.master) }} 
                             E:{{ "%.2f"|format(dados.configuracao.pesos.estelar) }} 
                             C:{{ "%.2f"|format(dados.configuracao.pesos.chain) }}
                             T:{{ "%.2f"|format(dados.configuracao.pesos.temporal) }}
+                            Q:{{ "%.2f"|format(dados.configuracao.pesos.quente|default(0)) }}
                         </span>
                     </div>
                     <div>
@@ -538,9 +534,6 @@
                         <span class="text-gray-400">Timestamp:</span>
                         <span class="text-white font-bold ml-2 text-xs">{{ dados.analise.confianca }}</span>
                     </div>
-
-                    
-
                 </div>
             </div>
 
@@ -781,11 +774,11 @@
                 max_protecoes: 6,
                 incluir_protecoes: true,
                 incluir_zero: true,
-                w_master: 0.25,
-                w_estelar: 0.20,
-                w_chain: 0.20,
-                w_temporal: 0.15,
-                target_time: '',
+                w_estelar: 0.25,
+                w_chain: 0.25,
+                w_temporal: 0.25,
+                w_quente: 0.25,
+                minute_offset: 3,
                 interval_minutes: 5,
                 days_back: 30
             };
@@ -802,11 +795,11 @@
                 max_protecoes: parseInt(document.getElementById('config-max-protecoes').value),
                 incluir_protecoes: document.getElementById('config-incluir-protecoes').checked,
                 incluir_zero: document.getElementById('config-incluir-zero').checked,
-                w_master: parseFloat(document.getElementById('config-w-master').value),
                 w_estelar: parseFloat(document.getElementById('config-w-estelar').value),
                 w_chain: parseFloat(document.getElementById('config-w-chain').value),
                 w_temporal: parseFloat(document.getElementById('config-w-temporal').value),
-                target_time: document.getElementById('config-target-time').value,
+                w_quente: parseFloat(document.getElementById('config-w-quente').value),
+                minute_offset: parseInt(document.getElementById('config-minute-offset').value),
                 interval_minutes: parseInt(document.getElementById('config-interval-minutes').value),
                 days_back: parseInt(document.getElementById('config-days-back').value)
             };
@@ -818,11 +811,11 @@
             document.getElementById('config-max-protecoes').value = config.max_protecoes;
             document.getElementById('config-incluir-protecoes').checked = config.incluir_protecoes;
             document.getElementById('config-incluir-zero').checked = config.incluir_zero;
-            document.getElementById('config-w-master').value = config.w_master;
             document.getElementById('config-w-estelar').value = config.w_estelar;
             document.getElementById('config-w-chain').value = config.w_chain;
             document.getElementById('config-w-temporal').value = config.w_temporal;
-            document.getElementById('config-target-time').value = config.target_time || '';
+            document.getElementById('config-w-quente').value = config.w_quente ?? 0.25;
+            document.getElementById('config-minute-offset').value = config.minute_offset ?? 3;
             document.getElementById('config-interval-minutes').value = config.interval_minutes;
             document.getElementById('config-days-back').value = config.days_back;
         }
@@ -838,16 +831,16 @@
         }
 
         function atualizarSomaPesos() {
-            const master = parseFloat(document.getElementById('config-w-master').value) || 0;
             const estelar = parseFloat(document.getElementById('config-w-estelar').value) || 0;
             const chain = parseFloat(document.getElementById('config-w-chain').value) || 0;
             const temporal = parseFloat(document.getElementById('config-w-temporal').value) || 0;
+            const quente = parseFloat(document.getElementById('config-w-quente').value) || 0;
             
-            const soma = master + estelar + chain + temporal;
+            const soma = estelar + chain + temporal + quente;
             document.getElementById('soma-pesos').textContent = soma.toFixed(2);
         }
 
-        ['config-w-master', 'config-w-estelar', 'config-w-chain', 'config-w-temporal'].forEach(id => {
+        ['config-w-estelar', 'config-w-chain', 'config-w-temporal', 'config-w-quente'].forEach(id => {
             document.getElementById(id).addEventListener('input', atualizarSomaPesos);
         });
 
@@ -914,7 +907,13 @@
                         <div>
                             <p class="text-white font-semibold">📅 ${item.horario}</p>
                             <p class="text-gray-400 text-sm">Último número: <span class="text-yellow-400 font-bold">${item.ultimo_numero}</span></p>
-                            ${item.pesos ? `<p class="text-gray-500 text-xs mt-1">Pesos: M:${item.pesos.master.toFixed(2)} E:${item.pesos.estelar.toFixed(2)} C:${item.pesos.chain.toFixed(2)}</p>` : ''}
+                            ${item.pesos ? `<p class="text-gray-500 text-xs mt-1">
+                                Pesos:
+                                ${item.pesos.estelar !== undefined ? ' E:' + item.pesos.estelar.toFixed(2) : ''}
+                                ${item.pesos.chain !== undefined ? ' C:' + item.pesos.chain.toFixed(2) : ''}
+                                ${item.pesos.temporal !== undefined ? ' T:' + item.pesos.temporal.toFixed(2) : ''}
+                                ${item.pesos.quente !== undefined ? ' Q:' + item.pesos.quente.toFixed(2) : ''}
+                            </p>` : ''}
                         </div>
                         <span class="text-gray-500 text-xs">#${index + 1}</span>
                     </div>
@@ -1250,14 +1249,14 @@
                 max_protecoes: config.max_protecoes,
                 incluir_zero: config.incluir_zero,
                 limite_historico: config.limite_historico,
-                w_master: config.w_master,
                 w_estelar: config.w_estelar,
                 w_chain: config.w_chain,
-                w_temporal: config.w_temporal
+                w_temporal: config.w_temporal,
+                w_quente: config.w_quente
             });
 
-            if (config.target_time) {
-                params.append('target_time', config.target_time);
+            if (!Number.isNaN(config.minute_offset)) {
+                params.append('minute_offset', config.minute_offset);
             }
             if (config.interval_minutes) {
                 params.append('interval_minutes', config.interval_minutes);
@@ -1361,14 +1360,14 @@
                 max_protecoes: config.max_protecoes,
                 incluir_zero: config.incluir_zero,
                 limite_historico: config.limite_historico,
-                w_master: config.w_master,
                 w_estelar: config.w_estelar,
                 w_chain: config.w_chain,
-                w_temporal: config.w_temporal
+                w_temporal: config.w_temporal,
+                w_quente: config.w_quente
             });
 
-            if (config.target_time) {
-                params.append('target_time', config.target_time);
+            if (!Number.isNaN(config.minute_offset)) {
+                params.append('minute_offset', config.minute_offset);
             }
             if (config.interval_minutes) {
                 params.append('interval_minutes', config.interval_minutes);
@@ -1390,13 +1389,6 @@
             preencherFormulario(config);
             atualizarSomaPesos();
             
-            if (!config.target_time) {
-                const now = new Date();
-                const hours = String(now.getHours()).padStart(2, '0');
-                const minutes = String(now.getMinutes()).padStart(2, '0');
-                document.getElementById('config-target-time').value = `${hours}:${minutes}`;
-            }
-            
             const dadosAtuais = {{ dados | tojson | safe }};
             let currentAnalise = dadosAtuais;
 
@@ -1409,8 +1401,6 @@
         });
     </script>
     <script>
-    
-    
         // --- TESTE DE APOSTA VIA WEBSOCKET (via iframe + extensão) ---
 
         // Lê os números da sugestão atual na aba Ao vivo (divs com data-numero)
@@ -1465,7 +1455,6 @@
                 origin: 'revesbot_frontend',
                 roulette_id: "{{ dados.roulette_id }}",
                 numbers: numeros
-                // se depois você precisar: stake, layout, etc. adiciona aqui
             };
 
             try {
@@ -1474,7 +1463,7 @@
                         type: 'RB_PLACE_BET',
                         payload
                     },
-                    '*' // se quiser deixar mais seguro, troca por 'https://DOMINIO-DA-CASA'
+                    '*'
                 );
                 console.log('[RevesBot] RB_PLACE_BET enviado para iframe:', payload);
                 setWsBetStatus('Comando de aposta enviado para a mesa. Veja o console da mesa/extensão.', 'success');
@@ -1484,7 +1473,7 @@
             }
         }
         
-                // Garante o bind do botão após o DOM estar pronto
+        // Bind do botão após o DOM estar pronto
         document.addEventListener('DOMContentLoaded', () => {
             const btnExec = document.getElementById('btn-executar-aposta');
             if (btnExec) {

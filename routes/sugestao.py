@@ -6,7 +6,7 @@ Inclui proteções dinâmicas (espelhos, vizinhos, zero)
 """
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from typing import List, Dict, Set
+from typing import List, Dict, Set, Any
 from collections import defaultdict
 import logging
 
@@ -15,6 +15,10 @@ from patterns.master import PatternMaster
 from patterns.estelar import PatternEstelar
 from patterns.chain import ChainPattern
 from patterns.temporal import TemporalPattern
+from patterns.comportamental import create_comportamental_pattern
+
+
+from patterns.numero_quente import HotNumbersPattern
 
 from collections import defaultdict
 from typing import Dict, List, Iterable, Optional
@@ -25,9 +29,11 @@ from fastapi.responses import  JSONResponse, HTMLResponse
 
 from fastapi.templating import Jinja2Templates
 
+
 templates = Jinja2Templates(directory="templates")
 
-
+from typing import Dict, List
+from patterns.base import PatternResult
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -41,6 +47,385 @@ WHEEL_ORDER = [
     29, 7, 28, 12, 35, 3, 26
 ]
 WHEEL_INDEX = {n: i for i, n in enumerate(WHEEL_ORDER)}
+
+
+def calcular_indice_confianca_global(
+    candidatos_top: List[int],
+    scores_ensemble: Dict[int, float],
+    resultado_estelar: PatternResult,
+    resultado_chain: PatternResult,
+    resultado_temporal: PatternResult,
+    resultado_quente: PatternResult,
+) -> Dict:
+    """
+    Calcula índice de confiança global e por número, considerando
+    quantos padrões (Estelar, Chain, Temporal, Quente) suportam
+    cada número e ponderando pelos scores do ensemble.
+    """
+
+    if not candidatos_top:
+        return {
+            "valor": 0.0,
+            "nivel": "baixo",
+            "detalhes": {
+                "media_padroes_por_numero": 0.0,
+                "max_padroes_numero": 0,
+            },
+            "por_numero": {},
+        }
+
+    # Mapas de presença por padrão
+    estelar_scores = resultado_estelar.scores or {}
+    chain_scores = resultado_chain.scores or {}
+    temporal_scores = resultado_temporal.scores or {}
+    quente_scores = resultado_quente.scores or {}
+
+    padroes_total = 4.0  # estelar, chain, temporal, quente
+
+    # Normalizar pesos do ensemble só nos candidatos_top
+    raw_scores = [scores_ensemble.get(n, 0.0) for n in candidatos_top]
+    soma_scores = sum(raw_scores)
+    if soma_scores <= 0:
+        # fallback: peso uniforme
+        pesos = {n: 1.0 / len(candidatos_top) for n in candidatos_top}
+    else:
+        pesos = {
+            n: (scores_ensemble.get(n, 0.0) / soma_scores)
+            for n in candidatos_top
+        }
+
+    por_numero: Dict[int, float] = {}
+    total_padroes = 0
+    max_padroes = 0
+    cobertura_ponderada = 0.0
+
+    for n in candidatos_top:
+        cnt = 0
+        if n in estelar_scores:
+            cnt += 1
+        if n in chain_scores:
+            cnt += 1
+        if n in temporal_scores:
+            cnt += 1
+        if n in quente_scores:
+            cnt += 1
+
+        max_padroes = max(max_padroes, cnt)
+        total_padroes += cnt
+
+        # confiança daquele número = proporção de padrões que o apoiam
+        conf_n = cnt / padroes_total
+        por_numero[n] = conf_n
+
+        cobertura_ponderada += conf_n * pesos.get(n, 0.0)
+
+    media_padroes_por_numero = (
+        total_padroes / (len(candidatos_top) * padroes_total)
+        if candidatos_top else 0.0
+    )
+    max_padroes_norm = max_padroes / padroes_total
+
+    # índice global: mistura de média ponderada + melhor caso
+    indice = 0.6 * cobertura_ponderada + 0.4 * max_padroes_norm
+
+    # nível qualitativo
+    if indice >= 0.7:
+        nivel = "alto"
+    elif indice >= 0.4:
+        nivel = "medio"
+    else:
+        nivel = "baixo"
+
+    return {
+        "valor": round(indice, 4),
+        "nivel": nivel,
+        "detalhes": {
+            "media_padroes_por_numero": round(media_padroes_por_numero, 4),
+            "max_padroes_numero": max_padroes,
+        },
+        "por_numero": por_numero,
+    }
+
+def aplicar_regra_fixos_ensemble(
+    bet_numbers: list[int],
+    history: list[int],
+) -> list[int]:
+    """
+    Ajusta a lista de aposta quando há mais de 25 fichas,
+    garantindo que alguns números fixos SEMPRE estejam na aposta:
+
+    - último número sorteado
+    - penúltimo número
+    - espelho(s) do último
+    - vizinhos dos espelhos do último
+    - (last-1) e (last+1), se entre 0 e 36
+    - vizinhos do último número
+
+    Mantém o mesmo tamanho da lista, apenas trocando números do final.
+    """
+
+    # Só aplicamos se tiver histórico suficiente e muitas fichas
+    if len(bet_numbers) <= 20 or len(history) < 2:
+        return bet_numbers
+
+    # history deve estar com MAIS RECENTE no índice 0 (como no resto da API)
+    ultimo = history[0]
+    penultimo = history[1]
+
+    fixos_ordenados: list[int] = []
+
+    # 1) último e penúltimo
+    fixos_ordenados.append(ultimo)
+    fixos_ordenados.append(penultimo)
+  
+    # 2) espelho(s) do último
+    mirrors = get_espelho(ultimo)
+    if isinstance(mirrors, int):
+        mirrors = [mirrors]
+    for m in mirrors:
+        if 0 <= m <= 36:
+            fixos_ordenados.append(m)
+
+    # 3) vizinhos dos espelhos
+    for m in mirrors:
+        if not (0 <= m <= 36):
+            continue
+        try:
+            vizinhos_m = get_vizinhos(m)
+        except Exception:
+            vizinhos_m = []
+        for v in vizinhos_m:
+            if 0 <= v <= 36:
+                fixos_ordenados.append(v)
+
+
+    # 4) número acima e abaixo do último (ex.: 13 e 15 se veio 14)
+    if 0 <= ultimo - 1 <= 36:
+        fixos_ordenados.append(ultimo - 1)
+    if 0 <= ultimo + 1 <= 36:
+        fixos_ordenados.append(ultimo + 1)
+
+    # 4) número acima e abaixo do último (ex.: 13 e 15 se veio 14)
+    if 0 <= penultimo - 1 <= 36:
+        fixos_ordenados.append(penultimo - 1)
+    if 0 <= penultimo + 1 <= 36:
+        fixos_ordenados.append(penultimo + 1)
+
+    # 5) vizinhos do último número
+    try:
+        vizinhos_ultimo = get_vizinhos(ultimo)
+    except Exception:
+        vizinhos_ultimo = []
+    for v in vizinhos_ultimo:
+        if 0 <= v <= 36:
+            fixos_ordenados.append(v)
+
+    # Normalizar: tirar duplicados mantendo ordem
+    vistos = set()
+    fixos_ordenados_unicos: list[int] = []
+    for n in fixos_ordenados:
+        if n not in vistos and 0 <= n <= 36:
+            vistos.add(n)
+            fixos_ordenados_unicos.append(n)
+
+    # Conjunto para checagens rápidas
+    fixos_set = set(fixos_ordenados_unicos)
+
+    # Trabalhar em cópia da lista de aposta
+    aposta = list(bet_numbers)
+
+    # Para cada número fixo, garantir que ele esteja na aposta
+    for num_fixo in fixos_ordenados_unicos:
+        # Se já está, não faz nada
+        if num_fixo in aposta:
+            continue
+
+        # Se não está, precisamos remover alguém do FINAL que não é "fixo"
+        # e colocar esse número no lugar
+        idx = len(aposta) - 1
+        while idx >= 0:
+            candidato_remocao = aposta[idx]
+
+            # Não removemos nenhum número que também esteja no conjunto de fixos
+            if candidato_remocao in fixos_set:
+                idx -= 1
+                continue
+
+            # Remover esse número e inserir o fixo
+            aposta.pop(idx)
+            aposta.append(num_fixo)
+            break  # segue para o próximo número fixo
+
+        # Se não encontrou ninguém para remover, apenas segue
+        # (isso significa que praticamente todos já são "fixos")
+
+    return aposta
+
+
+def _wheel_distance(a: int, b: int) -> int:
+    """Distância circular na roda física entre dois números."""
+    if a not in WHEEL_INDEX or b not in WHEEL_INDEX:
+        return 999
+    n = len(WHEEL_ORDER)
+    ia = WHEEL_INDEX[a]
+    ib = WHEEL_INDEX[b]
+    diff = abs(ia - ib)
+    return min(diff, n - diff)
+
+
+def _clusterizar_por_roda(
+    scores_ensemble: Dict[int, float],
+    dist_cluster: int = 1,
+    min_score: float = 0.0
+) -> List[Dict[str, Any]]:
+    """
+    Cria clusters de números pela proximidade na roda,
+    priorizando os números com maior score.
+
+    Retorna lista de clusters:
+    [
+      {
+        "nucleos": {13, 11}, 
+        "espelhos": {31},
+        "membros": {13, 36, 11, 31},
+        "forca": 2.45,  # soma ponderada
+        "scores": {numero: score}
+      },
+      ...
+    ]
+    """
+    # filtra números válidos e ordena por score desc
+    candidatos = [
+        (n, sc)
+        for n, sc in scores_ensemble.items()
+        if 0 <= n <= 36 and sc >= min_score
+    ]
+    candidatos.sort(key=lambda x: x[1], reverse=True)
+
+    clusters: List[Dict[str, Any]] = []
+
+    for numero, sc in candidatos:
+        if numero not in WHEEL_INDEX:
+            continue
+
+        melhor_cluster = None
+        melhor_dist = 999
+
+        for cl in clusters:
+            # aproximação: mede distância até qualquer núcleo do cluster
+            for nucleo in cl["nucleos"]:
+                d = _wheel_distance(numero, nucleo)
+                if d <= dist_cluster and d < melhor_dist:
+                    melhor_dist = d
+                    melhor_cluster = cl
+
+        if melhor_cluster is None:
+            # cria novo cluster com este número como núcleo
+            clusters.append({
+                "nucleos": {numero},
+                "espelhos": set(),
+                "membros": {numero},
+                "forca": sc,
+                "scores": {numero: sc},
+            })
+        else:
+            melhor_cluster["membros"].add(numero)
+            melhor_cluster["forca"] += sc
+            melhor_cluster["scores"][numero] = sc
+            # se ele for muito forte em relação ao cluster, vira núcleo também
+            melhor_cluster["nucleos"].add(numero)
+
+    # adiciona espelhos dentro dos clusters
+    usados = set()
+    for cl in clusters:
+        usados.update(cl["membros"])
+
+    for cl in clusters:
+        for nucleo in list(cl["nucleos"]):
+            esp = ESPELHOS.get(nucleo)
+            if esp is None or not (0 <= esp <= 36):
+                continue
+            if esp in usados:
+                # já está em algum cluster (pode ser no mesmo)
+                if esp in cl["membros"]:
+                    cl["espelhos"].add(esp)
+                continue
+
+            # adiciona espelho no mesmo cluster com peso levemente menor
+            sc_nucleo = cl["scores"].get(nucleo, 0.0)
+            sc_esp = sc_nucleo * 0.9
+            cl["espelhos"].add(esp)
+            cl["membros"].add(esp)
+            cl["scores"][esp] = sc_esp
+            cl["forca"] += sc_esp
+            usados.add(esp)
+
+    # ordena clusters por força decrescente
+    clusters.sort(key=lambda c: c["forca"], reverse=True)
+    return clusters
+
+
+def gerar_numeros_agrupados_por_regiao(
+    scores_ensemble: Dict[int, float],
+    dist_cluster: int = 1,
+    min_score: float = 0.0
+) -> List[int]:
+    """
+    Gera lista de números já agrupados por região:
+
+    - Prioriza clusters mais fortes (soma de scores).
+    - Dentro de cada cluster:
+        1) núcleos (ordenados por score)
+        2) espelhos dos núcleos
+        3) demais membros (buracos internos)
+
+    Você decide depois quantos usar (12, 14, 16, 18...).
+    """
+    clusters = _clusterizar_por_roda(
+        scores_ensemble=scores_ensemble,
+        dist_cluster=dist_cluster,
+        min_score=min_score,
+    )
+
+    resultado: List[int] = []
+    usados: set[int] = set()
+
+    for cl in clusters:
+        scores = cl["scores"]
+
+        # 1) núcleos ordenados por score
+        nucleos_ordenados = sorted(
+            list(cl["nucleos"]),
+            key=lambda n: scores.get(n, 0.0),
+            reverse=True,
+        )
+
+        # 2) espelhos dos núcleos (se existirem no cluster)
+        espelhos_ordenados = sorted(
+            list(cl["espelhos"]),
+            key=lambda n: scores.get(n, 0.0),
+            reverse=True,
+        )
+
+        # 3) demais membros (buracos internos / números da região)
+        outros = [
+            n for n in cl["membros"]
+            if n not in cl["nucleos"] and n not in cl["espelhos"]
+        ]
+        outros_ordenados = sorted(
+            outros,
+            key=lambda n: scores.get(n, 0.0),
+            reverse=True,
+        )
+
+        for n in nucleos_ordenados + espelhos_ordenados + outros_ordenados:
+            if n not in usados:
+                usados.add(n)
+                resultado.append(n)
+
+    return resultado
+
+
 
 def _get_wheel_neighbors(numero: int, distancia: int = 1) -> List[int]:
     """
@@ -102,14 +487,16 @@ async def _get_historico_interno(request: Request, roulette_id: str, limit: int 
         )
 
 def calcular_ensemble(
-    resultado_master,
     resultado_estelar,
     resultado_chain,
-    resultado_temporal,  # NOVO: 5º padrão
-    w_master: float = 0.20,
-    w_estelar: float = 0.20,
-    w_chain: float = 0.20,
-    w_temporal: float = 0.20  # NOVO
+    resultado_temporal, 
+    resultado_quente, 
+    resultado_comport,
+    w_estelar: float = 0.10,
+    w_chain: float = 0.5,
+    w_temporal: float = 0.10,
+    w_quente: float = 0.30,
+    w_comport: float = 0.30,
 ) -> Dict[int, float]:
     """
     Combina scores dos 5 padrões com pesos configuráveis
@@ -129,28 +516,9 @@ def calcular_ensemble(
     Returns:
         Dict {numero: score_combinado} normalizado
     """
-    # Ajuste dinâmico de pesos
-    padroes_chain = resultado_chain.metadata.get('total_cadeias_aprendidas', 0)
-    
-    # TEMPORAL retorna (candidates, metadata) - extrair
-    temporal_candidates = resultado_temporal[0] if isinstance(resultado_temporal, tuple) else {}
-    temporal_metadata = resultado_temporal[1] if isinstance(resultado_temporal, tuple) else {}
-    temporal_candidatos = temporal_metadata.get('candidates_found', 0)
-    
-   
-    # Normaliza pesos
-    total_peso = w_master + w_estelar + w_chain + w_temporal
-    w_master /= total_peso
-    w_estelar /= total_peso
-    w_chain /= total_peso
-    w_temporal /= total_peso
-    
     # Combina scores
     scores_combinados = defaultdict(float)
     
-    # MASTER
-    for num, score in resultado_master.scores.items():
-        scores_combinados[num] += w_master * score
     
     # ESTELAR
     for num, score in resultado_estelar.scores.items():
@@ -158,13 +526,17 @@ def calcular_ensemble(
     
     # CHAIN
     for num, score in resultado_chain.scores.items():
-        scores_combinados[num] += w_chain * score * 4
+        scores_combinados[num] += w_chain * score
     
-
-    
-    # TEMPORAL (usa candidates dict diretamente)
-    for num, score in temporal_candidates.items():
+    # TEMPORAL 
+    for num, score in resultado_temporal.scores.items():
         scores_combinados[num] += w_temporal * score
+
+    for num, score in resultado_quente.scores.items():
+        scores_combinados[num] += w_quente * score
+
+    for num, score in resultado_comport.scores.items():
+        scores_combinados[num] += w_comport * score
     
     # Normaliza resultado final
     if scores_combinados:
@@ -257,185 +629,6 @@ def detectar_vizinhos_para_isolados(
 
 
 
-from collections import defaultdict
-from typing import Dict, List, Iterable, Optional, Any
-
-def calcular_ensemble_rank(
-    sugestoes_master: Any,
-    sugestoes_estelar: Any,
-    sugestoes_chain: Any,
-    sugestoes_temporal: Any,
-    *,
-    w_master: float = 0.20,
-    w_estelar: float = 0.20,
-    w_chain: float = 0.20,
-    w_temporal: float = 0.20,
-    vizinhos_k: int = 1,
-    peso_numero: float = 1.0,
-    peso_espelho: float = 0.9,
-    peso_vizinho: float = 0.7,
-    peso_vizinho_espelho: float = 0.6
-) -> Dict[int, float]:
-    """
-    Ranking por números (sem scores de entrada).
-    Para cada número sugerido em cada padrão:
-      - base: +1.0
-      - espelho(s): +0.9
-      - vizinhos(base): +0.7
-      - vizinhos(espelho): +0.6
-    Aplica o peso do padrão em cada contribuição.
-    Retorna {numero: pontuacao}.
-    """
-
-    # -------- helpers para extrair números de qualquer formato --------
-    def _as_int_list(seq) -> List[int]:
-        out = []
-        for x in seq or []:
-            try:
-                xi = int(x)
-                if 0 <= xi <= 36:
-                    out.append(xi)
-            except Exception:
-                continue
-        return out
-
-    def _extract_numbers(obj: Any) -> List[int]:
-        """
-        Aceita:
-        - list/iterable de ints
-        - dict {numero: score/...} -> usa keys
-        - tuple (candidates, metadata) -> se candidates for dict/list
-        - PatternResult-like:
-            .numbers (list[int])
-            .scores (dict[int->float]) -> usa keys com score>0
-            .candidates (dict/list)
-            .ranking (list[dict{number:..}]) -> pega 'number'
-            .top_numbers / .bet_numbers (list[int])
-        """
-        if obj is None:
-            return []
-
-        # tuple (temporal: (candidates, metadata))
-        if isinstance(obj, tuple) and len(obj) >= 1:
-            cand = obj[0]
-            if isinstance(cand, dict):
-                return _as_int_list(cand.keys())
-            if isinstance(cand, (list, tuple, set)):
-                return _as_int_list(cand)
-
-        # dict -> keys
-        if isinstance(obj, dict):
-            return _as_int_list(obj.keys())
-
-        # iterable "puro"
-        try:
-            # strings não contam como iterável aqui
-            if not isinstance(obj, (str, bytes)):
-                it = iter(obj)  # pode lançar TypeError
-                return _as_int_list(it)
-        except TypeError:
-            pass
-
-        # objetos com atributos conhecidos (PatternResult etc.)
-        for attr in ("top_numbers", "bet_numbers", "numbers"):
-            if hasattr(obj, attr):
-                return _as_int_list(getattr(obj, attr))
-
-        if hasattr(obj, "scores"):
-            try:
-                sc = getattr(obj, "scores")
-                if isinstance(sc, dict):
-                    # pega só chaves com score > 0
-                    return _as_int_list([k for k, v in sc.items() if (isinstance(v, (int, float)) and v > 0)])
-            except Exception:
-                pass
-
-        if hasattr(obj, "candidates"):
-            cand = getattr(obj, "candidates")
-            if isinstance(cand, dict):
-                return _as_int_list(cand.keys())
-            if isinstance(cand, (list, tuple, set)):
-                return _as_int_list(cand)
-
-        if hasattr(obj, "ranking"):
-            rk = getattr(obj, "ranking")
-            # ranking pode ser list[dict{number:..}]
-            try:
-                nums = []
-                for item in rk or []:
-                    if isinstance(item, dict) and "number" in item:
-                        nums.append(item["number"])
-                if nums:
-                    return _as_int_list(nums)
-            except Exception:
-                pass
-
-        return []
-
-    # -------- vizinhos / espelhos (usa suas funções; fallback silencioso) --------
-    def _get_vizinhos(n: int) -> List[int]:
-        try:
-            v = get_vizinhos(n)  # sua função
-            return _as_int_list(set(v))
-        except Exception:
-            return []
-
-    def _get_vizinhos_k(n: int, k: int) -> List[int]:
-        if k <= 1:
-            return _get_vizinhos(n)
-        fronteira = set([n])
-        visitados = set([n])
-        for _ in range(k):
-            novos = set()
-            for x in list(fronteira):
-                for nb in _get_vizinhos(x):
-                    if nb not in visitados:
-                        novos.add(nb)
-                        visitados.add(nb)
-            fronteira = novos
-        visitados.discard(n)
-        return _as_int_list(visitados)
-
-    def _get_espelhos(n: int) -> List[int]:
-        try:
-            m = get_espelho(n)  # sua função
-            if isinstance(m, int):
-                m = [m]
-            return _as_int_list(set(m or []))
-        except Exception:
-            return []
-
-    # -------- acumulação ponderada --------
-    ranking: Dict[int, float] = defaultdict(float)
-
-    def _acumula(nums: List[int], peso_padrao: float) -> None:
-        if not nums:
-            return
-        vistos = set()
-        for n in nums:
-            if n in vistos:
-                continue
-            vistos.add(n)
-
-            ranking[n] += peso_numero * peso_padrao
-
-            espelhos = _get_espelhos(n)
-            for me in espelhos:
-                ranking[me] += peso_espelho * peso_padrao
-
-            for nb in _get_vizinhos_k(n, vizinhos_k):
-                ranking[nb] += peso_vizinho * peso_padrao
-
-            for me in espelhos:
-                for nbm in _get_vizinhos_k(me, vizinhos_k):
-                    ranking[nbm] += peso_vizinho_espelho * peso_padrao
-
-    _acumula(_extract_numbers(sugestoes_master),   w_master)
-    _acumula(_extract_numbers(sugestoes_estelar),  w_estelar)
-    _acumula(_extract_numbers(sugestoes_chain),    w_chain)
-    _acumula(_extract_numbers(sugestoes_temporal), w_temporal)
-
-    return dict(ranking)
 
 
 def aplicar_protecoes(
@@ -500,109 +693,82 @@ def identificar_faltantes(candidatos: List[int], historico: List[int], window: i
     return [num for num in candidatos if num not in recent_set]
 
 
+from typing import List, Dict, Set
+
 def calcular_consenso(
     candidatos: List[int],
-    resultado_master,
     resultado_estelar,
     resultado_chain,
-    resultado_temporal  # NOVO: 5º padrão
+    resultado_temporal,
+    resultado_quente,
 ) -> Dict:
     """
-    Calcula consenso entre os 5 padrões
-    
-    Returns:
-        Dict com análise de consenso
-    """
-    set_candidatos = set(candidatos)
-    set_master = set(resultado_master.scores.keys())
-    set_estelar = set(resultado_estelar.scores.keys())
-    set_chain = set(resultado_chain.scores.keys())
-    
-    # TEMPORAL retorna (candidates, metadata) - extrair set
-    temporal_candidates = resultado_temporal[0] if isinstance(resultado_temporal, tuple) else {}
-    set_temporal = set(temporal_candidates.keys())
-    
-    # Consenso total (5/5) - todos os padrões concordam
-    consenso_total = set_candidatos & set_master & set_estelar & set_chain & set_temporal
-    
-    # Consenso quádruplo (4/5) - 4 padrões concordam
-    mect = set_candidatos & set_master & set_estelar & set_chain & set_temporal - consenso_total
-    mept = set_candidatos & set_master & set_estelar  & set_temporal - consenso_total
-    mcpt = set_candidatos & set_master & set_chain  & set_temporal - consenso_total
-    ecpt = set_candidatos & set_estelar & set_chain  & set_temporal - consenso_total
-    mecp = set_candidatos & set_master & set_estelar & set_chain  - consenso_total
-    
-    # Consenso triplo (3/5) - 3 padrões concordam
-    met = set_candidatos & set_master & set_estelar & set_temporal - consenso_total - mect - mept
-    mct = set_candidatos & set_master & set_chain & set_temporal - consenso_total - mect - mcpt
-    mpt = set_candidatos & set_master & set_temporal - consenso_total - mept - mcpt
-    ect = set_candidatos & set_estelar & set_chain & set_temporal - consenso_total - mect - ecpt
-    ept = set_candidatos & set_estelar & set_temporal - consenso_total - mept - ecpt
-    cpt = set_candidatos & set_chain & set_temporal - consenso_total - mcpt - ecpt
-    mec = set_candidatos & set_master & set_estelar & set_chain - consenso_total - mect - mecp
-    mep = set_candidatos & set_master & set_estelar - consenso_total - mept - mecp
-    mcp = set_candidatos & set_master & set_chain - consenso_total - mcpt - mecp
-    ecp = set_candidatos & set_estelar & set_chain - consenso_total - ecpt - mecp
-    
-    # Consenso duplo (2/5)
-    me = set_candidatos & set_master & set_estelar - (consenso_total | mect | mept | mecp | met | mec | mep)
-    mc = set_candidatos & set_master & set_chain - (consenso_total | mect | mcpt | mecp | mct | mec | mcp)
-    mp = set_candidatos & set_master  - (consenso_total | mept | mcpt | mecp | mpt | mep | mcp)
-    mt = set_candidatos & set_master & set_temporal - (consenso_total | mect | mept | mcpt | met | mct | mpt)
-    ec = set_candidatos & set_estelar & set_chain - (consenso_total | mect | ecpt | mecp | ect | mec | ecp)
-    ep = set_candidatos & set_estelar  - (consenso_total | mept | ecpt | mecp | ept | mep | ecp)
-    et = set_candidatos & set_estelar & set_temporal - (consenso_total | mect | mept | ecpt | met | ect | ept)
-    cp = set_candidatos & set_chain  - (consenso_total | mcpt | ecpt | mecp | cpt | mcp | ecp)
-    ct = set_candidatos & set_chain & set_temporal - (consenso_total | mect | mcpt | ecpt | mct | ect | cpt)
-    pt = set_candidatos  & set_temporal - (consenso_total | mept | mcpt | ecpt | mpt | ept | cpt)
-    
-    # Únicos (apenas 1 padrão)
-    so_master = set_candidatos & set_master - set_estelar - set_chain  - set_temporal
-    so_estelar = set_candidatos & set_estelar - set_master - set_chain  - set_temporal
-    so_chain = set_candidatos & set_chain - set_master - set_estelar  - set_temporal
-    so_puxadas = set_candidatos  - set_master - set_estelar - set_chain - set_temporal
-    so_temporal = set_candidatos & set_temporal - set_master - set_estelar - set_chain 
-    
-    return {
-        'consenso_total': sorted(list(consenso_total)),
-        'consenso_quadruplo': {
-            'master_estelar_chain_temporal': sorted(list(mect)),
-            'master_estelar_puxadas_temporal': sorted(list(mept)),
-            'master_chain_puxadas_temporal': sorted(list(mcpt)),
-            'estelar_chain_puxadas_temporal': sorted(list(ecpt)),
-            'master_estelar_chain_puxadas': sorted(list(mecp))
-        },
-        'consenso_triplo': {
-            'master_estelar_temporal': sorted(list(met)),
-            'master_chain_temporal': sorted(list(mct)),
-            'master_puxadas_temporal': sorted(list(mpt)),
-            'estelar_chain_temporal': sorted(list(ect)),
-            'estelar_puxadas_temporal': sorted(list(ept)),
-            'chain_puxadas_temporal': sorted(list(cpt)),
-            'master_estelar_chain': sorted(list(mec)),
-            'master_estelar_puxadas': sorted(list(mep)),
-            'master_chain_puxadas': sorted(list(mcp)),
-            'estelar_chain_puxadas': sorted(list(ecp))
-        },
-        'consenso_duplo': {
-            'master_estelar': sorted(list(me)),
-            'master_chain': sorted(list(mc)),
-            'master_puxadas': sorted(list(mp)),
-            'master_temporal': sorted(list(mt)),
-            'estelar_chain': sorted(list(ec)),
-            'estelar_puxadas': sorted(list(ep)),
-            'estelar_temporal': sorted(list(et)),
-            'chain_puxadas': sorted(list(cp)),
-            'chain_temporal': sorted(list(ct)),
-            'puxadas_temporal': sorted(list(pt))
-        },
-        'unicos': {
-            'master': sorted(list(so_master)),
-            'estelar': sorted(list(so_estelar)),
-            'chain': sorted(list(so_chain)),
-            'puxadas': sorted(list(so_puxadas)),
-            'temporal': sorted(list(so_temporal))
+    Calcula consenso entre Estelar, Chain, Temporal e Quente
+    RESTRITO aos números que estão nos candidatos (ensemble final).
+
+    Retorna:
+        {
+            'consenso_4': [...],
+            'consenso_3': [...],
+            'consenso_2': [...],
+            'unicos': {
+                'estelar': [...],
+                'chain': [...],
+                'temporal': [...],
+                'quente': [...],
+            }
         }
+    """
+    set_final = set(candidatos)
+
+    sets_por_padrao: Dict[str, Set[int]] = {
+        "estelar": set(resultado_estelar.scores.keys()) if resultado_estelar and resultado_estelar.scores else set(),
+        "chain": set(resultado_chain.scores.keys()) if resultado_chain and resultado_chain.scores else set(),
+        "temporal": set(resultado_temporal.scores.keys()) if resultado_temporal and resultado_temporal.scores else set(),
+        "quente": set(resultado_quente.scores.keys()) if resultado_quente and resultado_quente.scores else set(),
+    }
+
+    # Interessa só a interseção com o conjunto final
+    sets_restritos = {
+        nome: s & set_final
+        for nome, s in sets_por_padrao.items()
+    }
+
+    # Mapa numero -> conj(de padrões onde ele aparece)
+    presencas: Dict[int, Set[str]] = {}
+    for nome, s in sets_restritos.items():
+        for n in s:
+            if n not in presencas:
+                presencas[n] = set()
+            presencas[n].add(nome)
+
+    consenso_4 = []
+    consenso_3 = []
+    consenso_2 = []
+
+    for n, pats in presencas.items():
+        k = len(pats)
+        if k == 4:
+            consenso_4.append(n)
+        elif k == 3:
+            consenso_3.append(n)
+        elif k == 2:
+            consenso_2.append(n)
+
+    # Unicos por padrão (apenas naquele padrão)
+    unicos = {
+        nome: sorted([
+            n for n, pats in presencas.items()
+            if pats == {nome}
+        ])
+        for nome in ["estelar", "chain", "temporal", "quente"]
+    }
+
+    return {
+        "consenso_4": sorted(consenso_4),
+        "consenso_3": sorted(consenso_3),
+        "consenso_2": sorted(consenso_2),
+        "unicos": unicos,
     }
 
 
@@ -610,16 +776,15 @@ def calcular_consenso(
 async def sugestao_ensemble(
     request: Request,
     roulette_id: str,
-    quantidade: int = Query(default=18, ge=1, le=28, description="Quantidade de sugestões principais"),
+    quantidade: int = Query(default=18, ge=1, le=35, description="Quantidade de sugestões principais"),
     incluir_protecoes: bool = Query(default=True, description="Incluir proteções (espelhos, vizinhos)"),
     max_protecoes: int = Query(default=6, ge=0, le=10, description="Máximo de proteções adicionais"),
-    w_master: float = Query(default=0.20, ge=0, le=1, description="Peso do MASTER"),
     w_estelar: float = Query(default=0.20, ge=0, le=1, description="Peso do ESTELAR"),
-    w_chain: float = Query(default=0.20, ge=0, le=1, description="Peso do CHAIN"),
-    w_puxadas: float = Query(default=0.20, ge=0, le=1, description="Peso do PUXADAS"),
+    w_chain: float = Query(default=0.50, ge=0, le=1, description="Peso do CHAIN"),
+    w_quente: float = Query(default=0.30, ge=0, le=1, description="Peso do PUXADAS"),
     w_temporal: float = Query(default=0.20, ge=0, le=1, description="Peso do TEMPORAL"),  # NOVO
     incluir_zero: bool = Query(default=True, description="Sempre incluir zero nas proteções"),
-    limite_historico: int = Query(default=2000, ge=100, le=5000, description="Quantidade de histórico"),
+    limite_historico: int = Query(default=200, ge=100, le=5000, description="Quantidade de histórico"),
     cover_holes=True,
     cover_isolated=True,
     isolated_min_core_score=0.6,
@@ -655,8 +820,7 @@ async def sugestao_ensemble(
     - Metadados dos 3 padrões
     """
     try:
-        db = request.app.state.db
-        
+                
         # Busca histórico
         logger.info(f"Buscando histórico para {roulette_id} (limite: {limite_historico})")
         numeros = await _get_historico_interno(request, roulette_id)
@@ -677,16 +841,6 @@ async def sugestao_ensemble(
             'verbose': False             # Modo silencioso
         }
         
-        
-        config_chain = {
-            "min_chain_support": 2,
-            "chain_decay": 0.95,
-            "recent_window_miss": 30,
-            "max_chain_length": 4
-        }
-
-
-
         config = {
         'max_gap_between_elements': 2,
         'memory_short': 10,
@@ -704,16 +858,6 @@ async def sugestao_ensemble(
         }
         }
         
-        # Cria instância
-
-        
-
-        
-        # Executa análises
-        logger.info("Executando MASTER...")
-        master = PatternMaster(config=config_master)
-        resultado_master = master.analyze(numeros)
-        
 
         logger.info("Executando ESTELAR...")
         estelar = PatternEstelar(config)
@@ -729,13 +873,10 @@ async def sugestao_ensemble(
         TEMPORAL_CONFIG = {
             "interval_minutes": 2,
             "days_back": days_back,
-            "min_occurrences": 1,
             "roulette_id": roulette_id,
         }
         
         temporal_pattern = TemporalPattern(**TEMPORAL_CONFIG)
-
-
         resultado_temporal = await temporal_pattern.analyze(
             numeros,
             target_time=target_time,
@@ -743,56 +884,85 @@ async def sugestao_ensemble(
             interval_minutes=interval_minutes,
             days_back=days_back
         )
-        
-        logger.info(f"TEMPORAL: {resultado_temporal[1].get('candidates_found', 0)} candidatos encontrados")
 
+        logger.info("Executando Numeros quentes...")
+        hot_pattern = HotNumbersPattern()
+        resultado_quente = hot_pattern.analyze(numeros)  # mesma history que você já usa
         
-        # Calcula ensemble 
-        logger.info("Calculando ensemble...")
-        scores_ensemble_rank = calcular_ensemble_rank(
-            resultado_master,
-            resultado_estelar,
-            resultado_chain,
-            resultado_temporal,  # NOVO
-            w_master=w_master,
-            w_estelar=w_estelar,
-            w_chain=w_chain,
-            w_temporal=w_temporal  # NOVO
-        )
 
+        pattern_comport = create_comportamental_pattern()
+        resultado_comport = pattern_comport.analyze(numeros)
+
+        # 4. Calcular ensemble de scores (SINAL BRUTO)
         scores_ensemble = calcular_ensemble(
-            resultado_master,
             resultado_estelar,
             resultado_chain,
-            resultado_temporal,  # NOVO
-            w_master=w_master,
+            resultado_temporal,
+            resultado_quente,
+            resultado_comport,
             w_estelar=w_estelar,
             w_chain=w_chain,
-            w_temporal=w_temporal  # NOVO
+            w_temporal=w_temporal,
+            w_quente=0.2,
+            w_comport=0.4   
         )
-        
-        
-        # Ordena candidatos
-        candidatos_ordenados = sorted(
+
+        # -----------------------------
+        # A) TOP BRUTO (sem compactar)
+        # -----------------------------
+        # ordena pelo score bruto do ensemble
+        ordenados_bruto = sorted(
             scores_ensemble.items(),
             key=lambda x: x[1],
             reverse=True
         )
-        
-        # Pega top N
-        candidatos_top = [num for num, _ in candidatos_ordenados[:quantidade]]
-        
-        # Identifica faltantes
-        faltantes = identificar_faltantes(candidatos_top, numeros, window=30)
-        
-        # Calcula consenso 
-        consenso = calcular_consenso(
-            candidatos_top,
-            resultado_master,
+
+        candidatos_top_bruto = [n for n, _ in ordenados_bruto[:quantidade]]
+
+        # Consenso calculado no BRUTO
+        consenso_bruto = calcular_consenso(
+            candidatos_top_bruto,
             resultado_estelar,
             resultado_chain,
-            resultado_temporal  # NOVO
+            resultado_temporal,
+            resultado_quente,
         )
+
+        # -----------------------------
+        # B) COMPACTAÇÃO (APOSTA FINAL)
+        # -----------------------------
+        numeros_agrupados = gerar_numeros_agrupados_por_regiao(
+            scores_ensemble=scores_ensemble,
+            dist_cluster=1,
+            min_score=0.0
+        )
+
+        candidatos_top = numeros_agrupados[:quantidade]
+
+        # aplica regra fixos na APOSTA FINAL
+        candidatos_top = aplicar_regra_fixos_ensemble(
+            bet_numbers=candidatos_top,
+            history=numeros,
+        )
+
+        
+
+        # Índice de confiança calculado no BRUTO
+        indice_confianca = calcular_indice_confianca_global(
+            candidatos_top=candidatos_top_bruto,
+            scores_ensemble=scores_ensemble,
+            resultado_estelar=resultado_estelar,
+            resultado_chain=resultado_chain,
+            resultado_temporal=resultado_temporal,
+            resultado_quente=resultado_quente,
+        )
+
+
+        # Identifica faltantes na APOSTA FINAL (porque faltante é sobre o que você vai jogar)
+        faltantes = identificar_faltantes(candidatos_top, numeros, window=30)
+
+        # Se quiser manter no payload:
+        consenso = consenso_bruto
         
         # Aplica proteções
         if incluir_protecoes:
@@ -854,6 +1024,7 @@ async def sugestao_ensemble(
         resposta = {
             "roulette_id": roulette_id,
             "timestamp": numeros[0] if numeros else None,
+            "historico" : numeros[:50],
             "sugestoes": {
                 "principais": [
                     {
@@ -878,45 +1049,52 @@ async def sugestao_ensemble(
                 "consenso": consenso,
                 "faltantes": faltantes,
                 "ultimo_numero": numeros[0],
-                "ultimos_10": numeros[:10]
+                "ultimos_10": numeros[:10],
+                "confianca": indice_confianca,
             },
             "padroes": {
-                "master": {
-                    "padroes_encontrados": resultado_master.metadata.get('padroes_encontrados', 0),
-                    "modo": resultado_master.metadata.get('modo', 'normal'),
-                    "top_3": [num for num, _ in resultado_master.get_top_n(5)]
-                },
                 "estelar": {
                     "padroes_equivalentes": resultado_estelar.metadata.get('padroes_equivalentes', 0),
                     "tipos": resultado_estelar.metadata.get('tipos_equivalencia', {}),
-                    "top_3": [num for num, _ in resultado_estelar.get_top_n(18)]
+                    "top_18": [num for num, _ in resultado_estelar.get_top_n(12)],
                 },
                 "chain": {
                     "cadeias_aprendidas": resultado_chain.metadata.get('total_cadeias_aprendidas', 0),
                     "inversoes": resultado_chain.metadata.get('inversoes_detectadas', 0),
                     "compensacoes": resultado_chain.metadata.get('compensacoes_detectadas', 0),
-                    "top_pares": resultado_chain.metadata.get('top_pares', [])[:5],
-                    "top_3": [num for num, _ in resultado_chain.get_top_n(18)]
+                    "top_18": [num for num, _ in resultado_chain.get_top_n(12)]
                 },
-                
                 "temporal": {
-                    "time_analyzed": resultado_temporal[1].get('time_analyzed', ''),
-                    "interval_minutes": resultado_temporal[1].get('interval_minutes', 0),
-                    "interval_end": resultado_temporal[1].get('interval_end', ''),
-                    "days_analyzed": resultado_temporal[1].get('days_analyzed', 0),
-                    "total_occurrences": resultado_temporal[1].get('total_occurrences', 0),
-                    "days_with_data": resultado_temporal[1].get('days_with_data', 0),
-                    "candidates_found": resultado_temporal[1].get('candidates_found', 0),
-                    "top_5_historical": resultado_temporal[1].get('top_5_historical', [])[:18],
-                    "roulette_id": resultado_temporal[1].get('roulette_id', roulette_id)
+                    "time_analyzed": resultado_temporal.metadata.get('time_analyzed', ''),
+                    "interval_minutes": resultado_temporal.metadata.get('interval_minutes', 0),
+                    "interval_end": resultado_temporal.metadata.get('interval_end', ''),
+                    "days_analyzed": resultado_temporal.metadata.get('days_analyzed', 0),
+                    "total_occurrences": resultado_temporal.metadata.get('total_occurrences', 0),
+                    "days_with_data": resultado_temporal.metadata.get('days_with_data', 0),
+                    "candidates_found": resultado_temporal.metadata.get('candidates_found', 0),
+                    "top_18": [num for num, _ in resultado_temporal.get_top_n(12)],
+                    "roulette_id": resultado_temporal.metadata.get('roulette_id', roulette_id)
+                },
+                "quente": {
+                    "window_size": resultado_quente.metadata.get('window_size', 0),
+                    "window_size_real": resultado_quente.metadata.get('window_size_real', 0),
+                    "short_window": resultado_quente.metadata.get('short_window', 0),
+                    "expected_per_number": resultado_quente.metadata.get('expected_per_number', 0.0),
+                    "top_18": [num for num, _ in resultado_quente.get_top_n(12)],
+                    "top_hot_debug": resultado_quente.metadata.get('top_hot', [])
+                },
+
+                "comportamental": {
+                    "top_18": [num for num, _ in resultado_comport.get_top_n(12)],
                 }
             },
             "configuracao": {
                 "pesos": {
-                    "master": w_master,
                     "estelar": w_estelar,
                     "chain": w_chain,
-                    "temporal": w_temporal
+                    "temporal": w_temporal,
+                    "quente": w_quente,
+                    "comportamental" : 2.0
                 },
                 "temporal_config": {
                     "target_time": target_time,
@@ -964,30 +1142,31 @@ async def sugestao_ensemble(
 
 
 def _get_consenso_nivel(numero: int, consenso: Dict) -> str:
-    """Retorna nível de consenso de um número (5 padrões)"""
-    if numero in consenso['consenso_total']:
-        return "total_5/5"
+    """
+    Retorna nível de consenso de um número considerando 4 padrões:
+    - estelar
+    - chain
+    - temporal
+    - quente
+    """
+    # 4/4 padrões
+    if numero in consenso.get("consenso_4", []):
+        return "total_4/4"
     
-    # Consenso quádruplo (4/5)
-    for tipo, nums in consenso.get('consenso_quadruplo', {}).items():
+    # 3/4 padrões
+    if numero in consenso.get("consenso_3", []):
+        return "triplo_3/4"
+    
+    # 2/4 padrões
+    if numero in consenso.get("consenso_2", []):
+        return "duplo_2/4"
+    
+    # Único em um padrão específico
+    for padrao, nums in consenso.get("unicos", {}).items():
         if numero in nums:
-            return f"quadruplo_{tipo}"
+            return f"unico_{padrao}"
     
-    # Consenso triplo (3/5)
-    for tipo, nums in consenso.get('consenso_triplo', {}).items():
-        if numero in nums:
-            return f"triplo_{tipo}"
-    
-    # Consenso duplo (2/5)
-    for tipo, nums in consenso['consenso_duplo'].items():
-        if numero in nums:
-            return f"duplo_{tipo}"
-    
-    # Único (1/5)
-    for tipo, nums in consenso['unicos'].items():
-        if numero in nums:
-            return f"unico_{tipo}"
-    
+    # Está só no ensemble final, mas não entra em nenhum grupo acima
     return "ensemble"
 
 

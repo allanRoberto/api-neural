@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analizer Master + Estelar + Chain + Puxadas + Temporal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+        }
+        .numero-chip {
+            transition: all 0.3s ease;
+        }
+        .numero-chip:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+        .consenso-total { 
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+        }
+        .consenso-duplo { 
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        }
+        .faltante-badge {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .loading {
+            border: 4px solid #1e293b;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .tab-active {
+            border-bottom: 2px solid #3b82f6;
+            color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="p-4">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-white mb-2">
+                🎯 Analizer Master + Estelar + Chain + Puxadas + Temporal
+            </h1>
+            <p class="text-gray-400">Sistema Ensemble de Sugestões para Roleta</p>
+            <p class="text-gray-500 text-sm mt-2">{{ dados.roulette_id }}</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="bg-gray-800/50 backdrop-blur-sm rounded-t-xl border-x border-t border-gray-700">
+            <div class="flex gap-4 px-6 pt-4">
+                <button onclick="showTab('sugestao')" id="tab-sugestao" class="tab-active pb-2 px-2 font-semibold transition-all">
+                    📊 Sugestão Atual
+                </button>
+                <button onclick="showTab('aovivo')" id="tab-aovivo" class="pb-2 px-2 text-gray-400 hover:text-white font-semibold transition-all">
+                    🎥 Ao vivo
+                </button>
+                <button onclick="showTab('config')" id="tab-config" class="pb-2 px-2 text-gray-400 hover:text-white font-semibold transition-all">
+                    ⚙️ Configurações
+                </button>
+                <button onclick="showTab('historico')" id="tab-historico" class="pb-2 px-2 text-gray-400 hover:text-white font-semibold transition-all">
+                    📜 Histórico (20)
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab: Configurações -->
+        <div id="content-config" class="hidden bg-gray-800/50 backdrop-blur-sm rounded-b-xl p-6 mb-6 border border-gray-700">
+            <h2 class="text-xl font-bold text-white mb-4">⚙️ Configurações da API</h2>
+            <form id="configForm" class="space-y-6">
+                
+                <!-- Seção: Parâmetros Gerais -->
+                <div>
+                    <h3 class="text-lg font-semibold text-blue-400 mb-3">📋 Parâmetros Gerais</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Quantidade -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                Quantidade de Sugestões
+                                <span class="text-gray-500 text-xs">(1-12)</span>
+                            </label>
+                            <input type="number" id="config-quantidade" name="quantidade" min="1" max="28" 
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
+                                   value="6">
+                        </div>
+
+                        <!-- Limite Histórico -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                Limite de Histórico
+                                <span class="text-gray-500 text-xs">(100-5000)</span>
+                            </label>
+                            <input type="number" id="config-limite-historico" name="limite_historico" min="100" max="5000" step="100"
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
+                                   value="2000">
+                        </div>
+
+                        <!-- Máximo de Proteções -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                Máximo de Proteções
+                                <span class="text-gray-500 text-xs">(0-10)</span>
+                            </label>
+                            <input type="number" id="config-max-protecoes" name="max_protecoes" min="0" max="10" 
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
+                                   value="6">
+                        </div>
+                    </div>
+
+                    <!-- Checkboxes -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div class="flex items-center">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="config-incluir-protecoes" name="incluir_protecoes" checked
+                                       class="w-5 h-5 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 text-blue-600">
+                                <span class="ml-3 text-gray-300">Incluir Proteções (espelhos, vizinhos)</span>
+                            </label>
+                        </div>
+
+                        <div class="flex items-center">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="config-incluir-zero" name="incluir_zero" checked
+                                       class="w-5 h-5 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 text-blue-600">
+                                <span class="ml-3 text-gray-300">Sempre incluir Zero nas proteções</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seção: Pesos do Ensemble -->
+                <div>
+                    <h3 class="text-lg font-semibold text-purple-400 mb-3">⚖️ Pesos do Ensemble</h3>
+                    <p class="text-gray-400 text-sm mb-3">
+                        💡 Ajuste o peso de cada padrão (0.0 a 1.0). Os pesos serão normalizados automaticamente.
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Peso MASTER -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                🎯 Peso MASTER
+                                <span class="text-gray-500 text-xs">(0.0 - 1.0)</span>
+                            </label>
+                            <input type="number" id="config-w-master" name="w_master" min="0" max="1" step="0.05"
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
+                                   value="0.25">
+                            <p class="text-xs text-gray-500 mt-1">Padrões exatos e repetições</p>
+                        </div>
+
+                        <!-- Peso ESTELAR -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                ⭐ Peso ESTELAR
+                                <span class="text-gray-500 text-xs">(0.0 - 1.0)</span>
+                            </label>
+                            <input type="number" id="config-w-estelar" name="w_estelar" min="0" max="1" step="0.05"
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
+                                   value="0.20">
+                            <p class="text-xs text-gray-500 mt-1">Equivalências e substituições</p>
+                        </div>
+
+                        <!-- Peso CHAIN -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                🔗 Peso CHAIN
+                                <span class="text-gray-500 text-xs">(0.0 - 1.0)</span>
+                            </label>
+                            <input type="number" id="config-w-chain" name="w_chain" min="0" max="1" step="0.05"
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
+                                   value="0.20">
+                            <p class="text-xs text-gray-500 mt-1">Cadeias comportamentais</p>
+                        </div>
+
+
+                        <!-- Peso TEMPORAL -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                ⏰ Peso TEMPORAL
+                                <span class="text-gray-500 text-xs">(0.0 - 1.0)</span>
+                            </label>
+                            <input type="number" id="config-w-temporal" name="w_temporal" min="0" max="1" step="0.05"
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
+                                   value="0.15">
+                            <p class="text-xs text-gray-500 mt-1">Análise por horário</p>
+                        </div>
+                    </div>
+
+                    <!-- Soma dos Pesos -->
+                    <div class="mt-4 p-3 bg-gray-700/50 rounded-lg border border-gray-600">
+                        <p class="text-gray-300 text-sm">
+                            ✅ Soma dos pesos: <span id="soma-pesos" class="font-bold text-blue-400">1.00</span>
+                            <span class="text-gray-500 text-xs ml-2">(os pesos serão normalizados automaticamente)</span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Seção: Configurações TEMPORAL -->
+                <div>
+                    <h3 class="text-lg font-semibold text-yellow-400 mb-3">⏰ Configurações do Padrão TEMPORAL</h3>
+                    <div class="bg-yellow-900/20 border border-yellow-700/50 rounded-lg p-4 mb-4">
+                        <p class="text-yellow-200 text-sm mb-2">
+                            <strong>📊 Análise Temporal:</strong> Este padrão analisa números que apareceram em horários similares nos dias anteriores.
+                        </p>
+                        <p class="text-yellow-300/80 text-xs">
+                            O sistema busca padrões de horário no histórico e identifica quais números tendem a aparecer em momentos específicos do dia.
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Horário Alvo -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                ⏰ Horário Alvo (HH:MM)
+                            </label>
+                            <input type="time" id="config-target-time" name="target_time"
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-yellow-500 focus:outline-none"
+                                   value="">
+                            <p class="text-xs text-gray-500 mt-1">Deixe em branco para usar horário atual</p>
+                        </div>
+
+                        <!-- Intervalo de Análise -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                📊 Intervalo (minutos)
+                                <span class="text-gray-500 text-xs">(1-30)</span>
+                            </label>
+                            <input type="number" id="config-interval-minutes" name="interval_minutes" min="1" max="30"
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-yellow-500 focus:outline-none"
+                                   value="5">
+                            <p class="text-xs text-gray-500 mt-1">Janela de tempo (±N minutos)</p>
+                        </div>
+
+                        <!-- Dias de Histórico -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                📅 Histórico (days)
+                                <span class="text-gray-500 text-xs">(7-90)</span>
+                            </label>
+                            <input type="number" id="config-days-back" name="days_back" min="7" max="90"
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-yellow-500 focus:outline-none"
+                                   value="30">
+                            <p class="text-xs text-gray-500 mt-1">Quantos dias analisar</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botões de Ação -->
+                <div class="flex gap-4">
+                    <button type="submit" class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 px-6 rounded-lg transition-all">
+                        💾 Salvar e Atualizar
+                    </button>
+                    <button type="button" onclick="resetarConfiguracoes()" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition-all">
+                        🔄 Restaurar Padrão
+                    </button>
+                </div>
+
+            </form>
+        </div>
+
+        <!-- Tab: Sugestão Atual -->
+        <div id="content-sugestao" class="bg-gray-800/50 backdrop-blur-sm rounded-b-xl p-6 mb-6 border border-gray-700">
+            <!-- Histórico Recente -->
+            <div class="mb-6">
+                <h2 class="text-xl font-bold text-white mb-4">📊 Últimos 10 números da mesa</h2>
+                <div class="flex flex-wrap gap-2">
+                    {% for num in dados.analise.ultimos_10 %}
+                    <span class="bg-gray-600 text-white px-4 py-2 rounded-lg font-bold">{{ num }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            <!-- Sugestões Principais -->
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-white mb-4">🎲 Números Sugeridos ({{ dados.sugestoes.principais|length }})</h2>
+
+                {% if dados.analise.confianca is defined %}
+                <div class="mb-3 flex items-center gap-3">
+                    <span class="text-sm text-gray-200">
+                        Nível de confiança da previsão:
+                    </span>
+                    <div class="flex-1 h-2 rounded-full bg-gray-700 overflow-hidden" style="max-width: 260px;">
+                        <div
+                            class="h-full bg-emerald-400"
+                            style="width: {{ (dados.analise.confianca or 0) * 100 }}%;"
+                        ></div>
+                    </div>
+                    <span class="text-sm font-semibold text-emerald-300">
+                        {{ "%.0f"|format((dados.analise.confianca or 0) * 100) }}%
+                    </span>
+                </div>
+                {% endif %}
+                <div class="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+                    {% for sugestao in dados.sugestoes.principais %}
+                    <div class="numero-chip bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-4 text-center shadow-lg">
+                        <div class="text-3xl font-bold text-white">{{ sugestao.numero }}</div>
+                        <div class="text-xs text-blue-200 mt-1">{{ "%.1f"|format(sugestao.score * 100) }}%</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Proteções -->
+            {% if dados.sugestoes.protecoes|length > 0 %}
+            <div class="mb-6">
+                <h2 class="text-xl font-bold text-white mb-4">🛡️ Proteções ({{ dados.sugestoes.protecoes|length }})</h2>
+                <div class="grid grid-cols-6 md:grid-cols-10 lg:grid-cols-12 gap-2">
+                    {% for protecao in dados.sugestoes.protecoes %}
+                    <div class="bg-gray-700 rounded-lg p-3 text-center">
+                        <div class="text-xl font-bold text-gray-300">{{ protecao.numero }}</div>
+                        <div class="text-xs text-gray-500 mt-1">{{ protecao.tipo }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Consenso -->
+            <div class="mb-6">
+                <h2 class="text-xl font-bold text-white mb-4">🤝 Consenso entre Padrões</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    
+                    <!-- Total (5/5) -->
+                    {% if dados.analise.consenso.consenso_total|length > 0 %}
+                    <div class="consenso-total rounded-xl p-4 shadow-lg">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">🌟</span>
+                            <h3 class="text-white font-bold">Total (5/5 padrões)</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            {% for num in dados.analise.consenso.consenso_total %}
+                            <span class="bg-white/20 text-white px-3 py-1 rounded-full font-bold">{{ num }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Quádruplo (4/5) -->
+                    {% if dados.analise.consenso.consenso_quadruplo %}
+                    <div class="bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl p-4 shadow-lg">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">💎</span>
+                            <h3 class="text-white font-bold">Quádruplo (4/5)</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            {% for tipo, numeros in dados.analise.consenso.consenso_quadruplo.items() %}
+                                {% for num in numeros %}
+                                <span class="bg-white/20 text-white px-3 py-1 rounded-full font-bold">{{ num }}</span>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Triplo (3/5) -->
+                    {% if dados.analise.consenso.consenso_triplo %}
+                    <div class="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-xl p-4 shadow-lg">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">🔷</span>
+                            <h3 class="text-white font-bold">Triplo (3/5)</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            {% for tipo, numeros in dados.analise.consenso.consenso_triplo.items() %}
+                                {% for num in numeros %}
+                                <span class="bg-white/20 text-white px-3 py-1 rounded-full font-bold">{{ num }}</span>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Duplo (2/5) -->
+                    {% if dados.analise.consenso.consenso_duplo %}
+                    <div class="consenso-duplo rounded-xl p-4 shadow-lg">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">🔹</span>
+                            <h3 class="text-white font-bold">Duplo (2/5)</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            {% for tipo, numeros in dados.analise.consenso.consenso_duplo.items() %}
+                                {% for num in numeros %}
+                                <span class="bg-white/20 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                </div>
+            </div>
+
+            <!-- Análise Individual -->
+            <div class="mb-6">
+                <h2 class="text-xl font-bold text-white mb-4">🔍 Análise Individual dos Padrões</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    
+                    <!-- MASTER -->
+                    <div class="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+                        <h3 class="text-lg font-bold text-blue-400 mb-3">🎯 MASTER</h3>
+                        <p class="text-xs text-gray-400 mb-2">Padrões: {{ dados.padroes.master.padroes_encontrados }}</p>
+                        <div class="flex flex-wrap gap-2">
+                            {% for num in dados.padroes.master.top_3 %}
+                            <span class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
+                            {% endfor %}
+                            {% if dados.padroes.master.top_3|length == 0 %}
+                            <p class="text-gray-400 text-sm">Nenhum padrão detectado</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- ESTELAR -->
+                    <div class="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+                        <h3 class="text-lg font-bold text-purple-400 mb-3">⭐ ESTELAR</h3>
+                        <p class="text-xs text-gray-400 mb-2">Equivalentes: {{ dados.padroes.estelar.padroes_equivalentes }}</p>
+                        <div class="flex flex-wrap gap-2">
+                            {% for num in dados.padroes.estelar.top_3 %}
+                            <span class="bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
+                            {% endfor %}
+                            {% if dados.padroes.estelar.top_3|length == 0 %}
+                            <p class="text-gray-400 text-sm">Nenhum padrão detectado</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- CHAIN -->
+                    <div class="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+                        <h3 class="text-lg font-bold text-green-400 mb-3">🔗 CHAIN</h3>
+                        <p class="text-xs text-gray-400 mb-2">
+                            Cadeias: {{ dados.padroes.chain.cadeias_aprendidas }} | 
+                            Inversões: {{ dados.padroes.chain.inversoes }}
+                        </p>
+                        <div class="flex flex-wrap gap-2">
+                            {% for num in dados.padroes.chain.top_3 %}
+                            <span class="bg-green-600 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
+                            {% endfor %}
+                            {% if dados.padroes.chain.top_3|length == 0 %}
+                            <p class="text-gray-400 text-sm">Nenhum padrão detectado</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+
+
+                    <!-- TEMPORAL -->
+                    <div class="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+                        <h3 class="text-lg font-bold text-yellow-400 mb-3">⏰ TEMPORAL</h3>
+                        <p class="text-xs text-gray-400 mb-2">
+                            Horário: {{ dados.padroes.temporal.time_analyzed or 'N/A' }} 
+                            {% if dados.padroes.temporal.interval_minutes %}
+                            (±{{ dados.padroes.temporal.interval_minutes }}min)
+                            {% endif %}
+                            <br>
+                            Candidatos: {{ dados.padroes.temporal.candidates_found or 0 }} | 
+                            Ocorrências: {{ dados.padroes.temporal.total_occurrences or 0 }}
+                        </p>
+                        <div class="flex flex-wrap gap-2">
+                            {% if dados.padroes.temporal.top_5_historical %}
+                                {% for item in dados.padroes.temporal.top_5_historical[:18] %}
+                                <span class="bg-yellow-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                                    {% if item.numero is defined %}
+                                        {{ item.numero }}
+                                    {% elif item.number is defined %}
+                                        {{ item.number }}
+                                    {% else %}
+                                        {{ item }}
+                                    {% endif %}
+                                </span>
+                                {% endfor %}
+                            {% else %}
+                            <p class="text-gray-400 text-sm">Nenhum dado temporal encontrado</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Números Faltantes -->
+            {% if dados.analise.faltantes|length > 0 %}
+            <div class="mb-6">
+                <h2 class="text-xl font-bold text-white mb-4">
+                    ⏳ Números Faltantes 
+                    <span class="text-sm text-gray-400 font-normal">(não apareceram nas últimas 30 jogadas)</span>
+                </h2>
+                <div class="grid grid-cols-6 md:grid-cols-10 lg:grid-cols-12 gap-2">
+                    {% for num in dados.analise.faltantes %}
+                    <div class="bg-orange-600/80 rounded-lg p-3 text-center faltante-badge">
+                        <div class="text-xl font-bold text-white">{{ num }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            
+
+            <!-- Metadata -->
+            <div class="bg-gray-700/30 rounded-xl p-4 border border-gray-600">
+                <h3 class="text-lg font-bold text-gray-300 mb-3">📋 Informações da Análise</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                    <div>
+                        <span class="text-gray-400">Último número:</span>
+                        <span class="text-white font-bold ml-2">{{ dados.analise.ultimo_numero }}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400">Histórico analisado:</span>
+                        <span class="text-white font-bold ml-2">{{ dados.configuracao.historico_analisado }} jogadas</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400">Total sugerido:</span>
+                        <span class="text-white font-bold ml-2">{{ dados.sugestoes.total_numeros }} números</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400">Pesos:</span>
+                        <span class="text-white font-bold ml-2">
+                            M:{{ "%.2f"|format(dados.configuracao.pesos.master) }} 
+                            E:{{ "%.2f"|format(dados.configuracao.pesos.estelar) }} 
+                            C:{{ "%.2f"|format(dados.configuracao.pesos.chain) }}
+                            T:{{ "%.2f"|format(dados.configuracao.pesos.temporal) }}
+                        </span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400">Proteções:</span>
+                        <span class="text-white font-bold ml-2">{{ dados.sugestoes.protecoes|length }}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400">Timestamp:</span>
+                        <span class="text-white font-bold ml-2 text-xs">{{ dados.analise.confianca }}</span>
+                    </div>
+
+                    
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Tab: Ao vivo -->
+        <div id="content-aovivo" class="hidden bg-gray-800/50 backdrop-blur-sm rounded-b-xl p-6 mb-6 border border-gray-700">
+            <div class="flex flex-col lg:flex-row gap-6">
+                <!-- Coluna esquerda: login e controles -->
+                <div class="w-full lg:w-1/3 space-y-4">
+                    <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <h2 class="text-lg font-bold text-white">🎥 Ao vivo</h2>
+                            <span id="live-status" class="text-xs text-gray-400">Aguardando...</span>
+                        </div>
+
+                        <!-- Seção de login -->
+                        <div id="live-login-section" class="space-y-3">
+                            <p class="text-xs text-gray-400">
+                                Faça login na casa de apostas para assistir a roleta dentro do painel.
+                            </p>
+                            <form id="live-login-form" class="space-y-3">
+                                <div>
+                                    <label for="live-email" class="block text-xs text-gray-300 mb-1">E-mail</label>
+                                    <input
+                                        id="live-email"
+                                        type="email"
+                                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="seu@email.com"
+                                        required
+                                    >
+                                </div>
+                                <div>
+                                    <label for="live-password" class="block text-xs text-gray-300 mb-1">Senha</label>
+                                    <input
+                                        id="live-password"
+                                        type="password"
+                                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="Sua senha da casa"
+                                        required
+                                    >
+                                </div>
+                                <button
+                                    id="btn-live-login"
+                                    type="submit"
+                                    class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-2 rounded-lg text-sm transition-all"
+                                >
+                                    🔐 Entrar na casa de apostas
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Seção de logado -->
+                        <div id="live-logged-section" class="hidden mt-3 text-xs text-gray-200">
+                            <div class="flex items-center justify-between mb-2">
+                                <div>
+                                    <p class="text-green-400 font-semibold">✅ Autenticado</p>
+                                    <p class="text-gray-300">
+                                        Usuário: <span id="live-user-info" class="font-semibold"></span>
+                                    </p>
+                                </div>
+                                <button
+                                    id="btn-live-logout"
+                                    type="button"
+                                    class="text-red-400 hover:text-red-300 text-xs border border-red-500/60 px-2 py-1 rounded-lg"
+                                >
+                                    Sair
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gerar nova análise -->
+                    <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4 space-y-3">
+                        <h3 class="text-sm font-semibold text-white mb-1">⚡ Gerar nova análise</h3>
+                        <p class="text-xs text-gray-400 mb-2">
+                            Gere uma nova análise para esta mesa usando os parâmetros de configuração atuais, sem recarregar a página.
+                        </p>
+                        <button
+                            id="btn-gerar-analise"
+                            type="button"
+                            class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-2"
+                        >
+                            <span>⚡</span>
+                            <span>Gerar nova análise</span>
+                        </button>
+                    </div>
+
+                    <!-- Números atuais da sugestão -->
+                    <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4 space-y-3">
+                        <h3 class="text-sm font-semibold text-white mb-1">🎲 Números desta sugestão</h3>
+                        <p class="text-xs text-gray-400 mb-2">
+                            Visualize aqui os números sugeridos enquanto acompanha a roleta ao vivo.
+                        </p>
+                        <div class="mb-3">
+                            <p class="text-xs text-gray-400 mb-1">Principais:</p>
+                            <div id="live-sugestao-principais" class="flex flex-wrap gap-1">
+                                {% if dados.sugestoes.principais|length > 0 %}
+                                    {% for sugestao in dados.sugestoes.principais %}
+                                    <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold">
+                                        {{ sugestao.numero }}
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-gray-500 text-xs">Nenhuma sugestão disponível no momento.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if dados.sugestoes.protecoes|length > 0 %}
+                        <div>
+                            <p class="text-xs text-gray-400 mb-1">Proteções:</p>
+                            <div id="live-sugestao-protecoes" class="flex flex-wrap gap-1">
+                                {% for protecao in dados.sugestoes.protecoes %}
+                                <div class="bg-gray-700 text-gray-200 w-7 h-7 rounded-full flex items-center justify-center text-xs">
+                                    {{ protecao.numero }}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div id="live-sugestao-protecoes" class="flex flex-wrap gap-1"></div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Coluna direita: iframe -->
+                <div class="w-full lg:w-2/3">
+                    <div class="relative rounded-xl border border-gray-700 overflow-hidden bg-black">
+                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none" id="live-iframe-placeholder">
+                            <p class="text-gray-500 text-sm text-center px-4">
+                                Aguardando login e carregamento do jogo.<br>
+                                Após autenticar, o vídeo será carregado automaticamente para esta mesa.
+                            </p>
+                        </div>
+                        <iframe
+                            id="live-iframe"
+                            src=""
+                            class="w-full h-[420px] md:h-[520px] lg:h-[560px] hidden"
+                            frameborder="0"
+                            allowfullscreen
+                        ></iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Histórico -->
+        <div id="content-historico" class="hidden bg-gray-800/50 backdrop-blur-sm rounded-b-xl p-6 mb-6 border border-gray-700">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-white">📜 Histórico de Sugestões (últimas 20)</h2>
+                <button onclick="limparHistorico()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-all text-sm">
+                    🗑️ Limpar Histórico
+                </button>
+            </div>
+            <div id="lista-historico" class="space-y-4">
+                <!-- Será preenchido via JavaScript -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ==========================================
+        // CONSTANTES
+        // ==========================================
+        
+        const CONFIG_KEY = 'analizer_config';
+        const HISTORICO_KEY = 'analizer_historico';
+
+        const API_BASE = 'https://auth.revesbot.com.br';
+
+        const CURRENT_ROULETTE_SLUG = "{{ dados.roulette_id }}";
+        const ROULETTE_SLUG_TO_GAME_ID = {
+            "pragmatic-korean-roulette": "457",
+            "pragmatic-speed-roulette-1": "556",
+            "pragmatic-auto-roulette": "373",
+            "pragmatic-mega-roulette-brazilian": "6478",
+            "pragmatic-mega-roulette": "550",
+            "pragmatic-brazilian-roulette": "450",
+            "pragmatic-auto-mega-roulette": "543",
+            "pragmatic-immersive-roulette-deluxe": "8261",
+            "pragmatic-roulette-macao": "552",
+            "pragmatic-speed-auto-roulette": "481",
+            "pragmatic-roulette-1": "473"
+        };
+
+        const SUGESTAO_JSON_URL = '/api/analise/sugestao/' + CURRENT_ROULETTE_SLUG;
+
+        let liveIsLogged = false;
+
+        // ==========================================
+        // CONFIGURAÇÕES - LOCALSTORAGE
+        // ==========================================
+
+        function carregarConfiguracoes() {
+            const configStr = localStorage.getItem(CONFIG_KEY);
+            if (configStr) {
+                return JSON.parse(configStr);
+            }
+            return {
+                quantidade: 6,
+                limite_historico: 2000,
+                max_protecoes: 6,
+                incluir_protecoes: true,
+                incluir_zero: true,
+                w_master: 0.25,
+                w_estelar: 0.20,
+                w_chain: 0.20,
+                w_temporal: 0.15,
+                target_time: '',
+                interval_minutes: 5,
+                days_back: 30
+            };
+        }
+
+        function salvarConfiguracoes(config) {
+            localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+        }
+
+        function lerFormulario() {
+            return {
+                quantidade: parseInt(document.getElementById('config-quantidade').value),
+                limite_historico: parseInt(document.getElementById('config-limite-historico').value),
+                max_protecoes: parseInt(document.getElementById('config-max-protecoes').value),
+                incluir_protecoes: document.getElementById('config-incluir-protecoes').checked,
+                incluir_zero: document.getElementById('config-incluir-zero').checked,
+                w_master: parseFloat(document.getElementById('config-w-master').value),
+                w_estelar: parseFloat(document.getElementById('config-w-estelar').value),
+                w_chain: parseFloat(document.getElementById('config-w-chain').value),
+                w_temporal: parseFloat(document.getElementById('config-w-temporal').value),
+                target_time: document.getElementById('config-target-time').value,
+                interval_minutes: parseInt(document.getElementById('config-interval-minutes').value),
+                days_back: parseInt(document.getElementById('config-days-back').value)
+            };
+        }
+
+        function preencherFormulario(config) {
+            document.getElementById('config-quantidade').value = config.quantidade;
+            document.getElementById('config-limite-historico').value = config.limite_historico;
+            document.getElementById('config-max-protecoes').value = config.max_protecoes;
+            document.getElementById('config-incluir-protecoes').checked = config.incluir_protecoes;
+            document.getElementById('config-incluir-zero').checked = config.incluir_zero;
+            document.getElementById('config-w-master').value = config.w_master;
+            document.getElementById('config-w-estelar').value = config.w_estelar;
+            document.getElementById('config-w-chain').value = config.w_chain;
+            document.getElementById('config-w-temporal').value = config.w_temporal;
+            document.getElementById('config-target-time').value = config.target_time || '';
+            document.getElementById('config-interval-minutes').value = config.interval_minutes;
+            document.getElementById('config-days-back').value = config.days_back;
+        }
+
+        function resetarConfiguracoes() {
+            if (confirm('⚠️ Tem certeza que deseja restaurar as configurações padrão?')) {
+                localStorage.removeItem(CONFIG_KEY);
+                const config = carregarConfiguracoes();
+                preencherFormulario(config);
+                atualizarSomaPesos();
+                alert('✅ Configurações restauradas!');
+            }
+        }
+
+        function atualizarSomaPesos() {
+            const master = parseFloat(document.getElementById('config-w-master').value) || 0;
+            const estelar = parseFloat(document.getElementById('config-w-estelar').value) || 0;
+            const chain = parseFloat(document.getElementById('config-w-chain').value) || 0;
+            const temporal = parseFloat(document.getElementById('config-w-temporal').value) || 0;
+            
+            const soma = master + estelar + chain + temporal;
+            document.getElementById('soma-pesos').textContent = soma.toFixed(2);
+        }
+
+        ['config-w-master', 'config-w-estelar', 'config-w-chain', 'config-w-temporal'].forEach(id => {
+            document.getElementById(id).addEventListener('input', atualizarSomaPesos);
+        });
+
+        // ==========================================
+        // SUBMIT DO FORMULÁRIO
+        // ==========================================
+
+        document.getElementById('configForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const config = lerFormulario();
+            salvarConfiguracoes(config);
+            alert('✅ Configurações salvas com sucesso!');
+            atualizarSugestao();
+        });
+
+        // ==========================================
+        // HISTÓRICO - LOCALSTORAGE
+        // ==========================================
+
+        function salvarNoHistorico(dados) {
+            let historico = JSON.parse(localStorage.getItem(HISTORICO_KEY) || '[]');
+            
+            const entrada = {
+                timestamp: new Date().toISOString(),
+                horario: new Date().toLocaleString('pt-BR'),
+                sugestoes: dados.sugestoes.principais.map(s => s.numero),
+                protecoes: dados.sugestoes.protecoes.map(p => p.numero),
+                ultimos_10: dados.analise.ultimos_10,
+                ultimo_numero: dados.analise.ultimo_numero,
+                total_numeros: dados.sugestoes.total_numeros,
+                pesos: dados.configuracao.pesos
+            };
+
+            historico.unshift(entrada);
+            historico = historico.slice(0, 20);
+
+            localStorage.setItem(HISTORICO_KEY, JSON.stringify(historico));
+        }
+
+        function carregarHistorico() {
+            return JSON.parse(localStorage.getItem(HISTORICO_KEY) || '[]');
+        }
+
+        function limparHistorico() {
+            if (confirm('⚠️ Tem certeza que deseja limpar todo o histórico?')) {
+                localStorage.removeItem(HISTORICO_KEY);
+                exibirHistorico();
+                alert('✅ Histórico limpo com sucesso!');
+            }
+        }
+
+        function exibirHistorico() {
+            const historico = carregarHistorico();
+            const container = document.getElementById('lista-historico');
+
+            if (historico.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 text-center py-8">Nenhuma sugestão salva ainda.</p>';
+                return;
+            }
+
+            container.innerHTML = historico.map((item, index) => `
+                <div class="bg-gray-700/50 rounded-lg p-4 border border-gray-600">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <p class="text-white font-semibold">📅 ${item.horario}</p>
+                            <p class="text-gray-400 text-sm">Último número: <span class="text-yellow-400 font-bold">${item.ultimo_numero}</span></p>
+                            ${item.pesos ? `<p class="text-gray-500 text-xs mt-1">Pesos: M:${item.pesos.master.toFixed(2)} E:${item.pesos.estelar.toFixed(2)} C:${item.pesos.chain.toFixed(2)}</p>` : ''}
+                        </div>
+                        <span class="text-gray-500 text-xs">#${index + 1}</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <p class="text-gray-400 text-xs mb-1">🎯 Sugestões:</p>
+                            <div class="flex flex-wrap gap-1">
+                                ${item.sugestoes.map(num => `
+                                    <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold">${num}</div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ${item.protecoes && item.protecoes.length > 0 ? `
+                        <div>
+                            <p class="text-gray-400 text-xs mb-1">🛡️ Proteções (${item.total_numeros} total):</p>
+                            <div class="flex flex-wrap gap-1">
+                                ${item.protecoes.map(num => `
+                                    <div class="bg-gray-600 text-gray-300 w-7 h-7 rounded-full flex items-center justify-center text-xs">${num}</div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                        <div>
+                            <p class="text-gray-400 text-xs mb-1">📊 Últimos 10 da mesa:</p>
+                            <div class="flex flex-wrap gap-1">
+                                ${item.ultimos_10.map(num => `
+                                    <div class="bg-gray-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs">${num}</div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ==========================================
+        // AO VIVO - LOGIN + IFRAME
+        // ==========================================
+
+        function getCurrentGameIdFromSlug() {
+            if (!CURRENT_ROULETTE_SLUG) return null;
+            return ROULETTE_SLUG_TO_GAME_ID[CURRENT_ROULETTE_SLUG] || null;
+        }
+
+        function liveSetStatus(message, type = 'info') {
+            const el = document.getElementById('live-status');
+            if (!el) return;
+
+            let colorClass = 'text-gray-300';
+            if (type === 'success') colorClass = 'text-green-400';
+            else if (type === 'warning') colorClass = 'text-yellow-400';
+            else if (type === 'danger') colorClass = 'text-red-400';
+
+            el.className = 'text-xs ' + colorClass;
+            el.textContent = message;
+        }
+
+        function liveToggleLoggedUI(isLogged, userNameOrEmail) {
+            const loginSection  = document.getElementById('live-login-section');
+            const loggedSection = document.getElementById('live-logged-section');
+            const userInfoSpan  = document.getElementById('live-user-info');
+
+            if (!loginSection || !loggedSection) return;
+
+            liveIsLogged = !!isLogged;
+
+            if (isLogged) {
+                loginSection.classList.add('hidden');
+                loggedSection.classList.remove('hidden');
+
+                if (userInfoSpan) {
+                    userInfoSpan.textContent = userNameOrEmail || '';
+                }
+            } else {
+                loginSection.classList.remove('hidden');
+                loggedSection.classList.add('hidden');
+            }
+        }
+
+        async function verifyBookmakerLogin() {
+            try {
+                liveSetStatus('Verificando sessão na casa de apostas...', 'info');
+
+                const res = await fetch(`${API_BASE}/api/bookmaker/verify`, {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const data = await res.json();
+
+                if (data.isConnected) {
+                    const user = data.user || {};
+                    const name = user.name || user.email || 'Usuário';
+                    liveSetStatus('Autenticado como ' + name, 'success');
+                    liveToggleLoggedUI(true, name);
+
+                    const autoGameId = getCurrentGameIdFromSlug();
+                    if (autoGameId) {
+                        setTimeout(() => {
+                            startLiveGame();
+                        }, 300);
+                    }
+                } else {
+                    liveSetStatus('Você não está autenticado na casa de apostas.', 'warning');
+                    liveToggleLoggedUI(false);
+                }
+            } catch (err) {
+                console.error('[Ao vivo] Erro em verifyBookmakerLogin', err);
+                liveSetStatus('Erro ao verificar autenticação.', 'danger');
+                liveToggleLoggedUI(false);
+            }
+        }
+
+        async function doLiveLogin(email, password) {
+            const loginBtn = document.getElementById('btn-live-login');
+            if (loginBtn) loginBtn.disabled = true;
+
+            try {
+                liveSetStatus('Realizando login...', 'info');
+
+                const res = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email,
+                        password
+                    })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.isConnected) {
+                    liveSetStatus('Login realizado com sucesso! Validando sessão...', 'success');
+                    await verifyBookmakerLogin();
+                    return true;
+                } else {
+                    const msg = data.error || data.message || 'Falha ao autenticar na casa de apostas.';
+                    liveSetStatus(msg, 'danger');
+                    liveToggleLoggedUI(false);
+                    return false;
+                }
+            } catch (err) {
+                console.error('[Ao vivo] Erro em doLiveLogin', err);
+                liveSetStatus('Erro ao realizar login.', 'danger');
+                liveToggleLoggedUI(false);
+                return false;
+            } finally {
+                if (loginBtn) loginBtn.disabled = false;
+            }
+        }
+
+        function doLiveLogout() {
+            const iframe = document.getElementById('live-iframe');
+            const placeholder = document.getElementById('live-iframe-placeholder');
+            if (iframe) {
+                iframe.src = '';
+                iframe.classList.add('hidden');
+            }
+            if (placeholder) {
+                placeholder.classList.remove('hidden');
+            }
+            liveSetStatus('Sessão local limpa. O cookie poderá continuar válido até expirar.', 'warning');
+            liveToggleLoggedUI(false);
+        }
+
+        async function startLiveGame() {
+            const iframe    = document.getElementById('live-iframe');
+            const placeholder = document.getElementById('live-iframe-placeholder');
+
+            if (!iframe) return;
+
+            const gameId = getCurrentGameIdFromSlug();
+            if (!gameId) {
+                liveSetStatus('Não foi possível determinar o gameId desta mesa.', 'warning');
+                return;
+            }
+
+            try {
+                liveSetStatus('Solicitando link do jogo...', 'info');
+
+                const res = await fetch(`${API_BASE}/api/start-game/${encodeURIComponent(gameId)}`, {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const data = await res.json();
+
+                if (!res.ok || !data.success || !data.link) {
+                    const msg = data.message || 'Não foi possível iniciar o jogo.';
+                    liveSetStatus(msg, 'danger');
+                    return;
+                }
+
+                iframe.src = data.link;
+                iframe.classList.remove('hidden');
+                if (placeholder) {
+                    placeholder.classList.add('hidden');
+                }
+                liveSetStatus('Jogo iniciado. Iframe carregando...', 'success');
+            } catch (err) {
+                console.error('[Ao vivo] Erro em startLiveGame', err);
+                liveSetStatus('Erro ao iniciar jogo.', 'danger');
+            }
+        }
+
+        function initAoVivo() {
+            const formLogin = document.getElementById('live-login-form');
+            const btnLogout = document.getElementById('btn-live-logout');
+            const btnGerar  = document.getElementById('btn-gerar-analise');
+
+            if (formLogin) {
+                formLogin.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const emailEl = document.getElementById('live-email');
+                    const passEl  = document.getElementById('live-password');
+
+                    const email = emailEl ? emailEl.value.trim() : '';
+                    const password = passEl ? passEl.value : '';
+
+                    if (!email || !password) {
+                        liveSetStatus('Preencha e-mail e senha.', 'warning');
+                        return;
+                    }
+
+                    await doLiveLogin(email, password);
+                });
+            }
+
+            if (btnLogout) {
+                btnLogout.addEventListener('click', () => {
+                    doLiveLogout();
+                });
+            }
+
+            if (btnGerar) {
+                btnGerar.addEventListener('click', () => {
+                    gerarNovaAnalise();
+                });
+            }
+        }
+
+        // ==========================================
+        // RENDER DA SUGESTÃO NA ABA AO VIVO
+        // ==========================================
+
+        function renderLiveSugestao(data) {
+            const principaisContainer = document.getElementById('live-sugestao-principais');
+            const protecoesContainer  = document.getElementById('live-sugestao-protecoes');
+
+            if (principaisContainer) {
+                const principais = (data.sugestoes && data.sugestoes.principais) || [];
+                if (!principais.length) {
+                    principaisContainer.innerHTML = '<p class="text-gray-500 text-xs">Nenhuma sugestão disponível no momento.</p>';
+                } else {
+                    principaisContainer.innerHTML = principais.map(s => {
+                        const numero = s.numero !== undefined ? s.numero : s;
+                        return `
+                            <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold">
+                                ${numero}
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+
+            if (protecoesContainer) {
+                const protecoes = (data.sugestoes && data.sugestoes.protecoes) || [];
+                if (!protecoes.length) {
+                    protecoesContainer.innerHTML = '';
+                } else {
+                    protecoesContainer.innerHTML = protecoes.map(p => {
+                        const numero = p.numero !== undefined ? p.numero : p;
+                        return `
+                            <div class="bg-gray-700 text-gray-200 w-7 h-7 rounded-full flex items-center justify-center text-xs">
+                                ${numero}
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+        }
+
+        // ==========================================
+        // GERAR NOVA ANÁLISE VIA API (SEM RELOAD)
+        // ==========================================
+
+        async function gerarNovaAnalise() {
+            const btn = document.getElementById('btn-gerar-analise');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span>⚡</span><span>Gerando análise...</span>';
+            }
+
+            const config = carregarConfiguracoes();
+            const params = new URLSearchParams({
+                quantidade: config.quantidade,
+                incluir_protecoes: config.incluir_protecoes,
+                max_protecoes: config.max_protecoes,
+                incluir_zero: config.incluir_zero,
+                limite_historico: config.limite_historico,
+                w_master: config.w_master,
+                w_estelar: config.w_estelar,
+                w_chain: config.w_chain,
+                w_temporal: config.w_temporal
+            });
+
+            if (config.target_time) {
+                params.append('target_time', config.target_time);
+            }
+            if (config.interval_minutes) {
+                params.append('interval_minutes', config.interval_minutes);
+            }
+            if (config.days_back) {
+                params.append('days_back', config.days_back);
+            }
+
+            const url = `${SUGESTAO_JSON_URL}?${params.toString()}`;
+
+            try {
+                const res = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    console.error('[Ao vivo] Erro ao gerar nova análise', data);
+                    alert(data.message || 'Erro ao gerar nova análise.');
+                    return;
+                }
+
+                if (!data || !data.sugestoes || !data.analise) {
+                    console.error('[Ao vivo] Resposta inesperada da API de análise', data);
+                    alert('Resposta inesperada da API de análise.');
+                    return;
+                }
+
+                currentAnalise = data;
+                salvarNoHistorico(currentAnalise);
+                renderLiveSugestao(currentAnalise);
+            } catch (err) {
+                console.error('[Ao vivo] Erro em gerarNovaAnalise', err);
+                alert('Erro ao gerar nova análise.');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>⚡</span><span>Gerar nova análise</span>';
+                }
+            }
+        }
+
+        // ==========================================
+        // NAVEGAÇÃO ENTRE TABS
+        // ==========================================
+
+        function showTab(tab) {
+            document.getElementById('content-sugestao').classList.add('hidden');
+            document.getElementById('content-config').classList.add('hidden');
+            document.getElementById('content-historico').classList.add('hidden');
+            const aovivoContent = document.getElementById('content-aovivo');
+            if (aovivoContent) {
+                aovivoContent.classList.add('hidden');
+            }
+
+            document.getElementById('tab-sugestao').classList.remove('tab-active');
+            document.getElementById('tab-config').classList.remove('tab-active');
+            document.getElementById('tab-historico').classList.remove('tab-active');
+            const aovivoTab = document.getElementById('tab-aovivo');
+            if (aovivoTab) {
+                aovivoTab.classList.remove('tab-active');
+            }
+            
+            document.getElementById('tab-sugestao').classList.add('text-gray-400');
+            document.getElementById('tab-config').classList.add('text-gray-400');
+            document.getElementById('tab-historico').classList.add('text-gray-400');
+            if (aovivoTab) {
+                aovivoTab.classList.add('text-gray-400');
+            }
+
+            const contentEl = document.getElementById('content-' + tab);
+            const tabEl = document.getElementById('tab-' + tab);
+            if (contentEl) {
+                contentEl.classList.remove('hidden');
+            }
+            if (tabEl) {
+                tabEl.classList.add('tab-active');
+                tabEl.classList.remove('text-gray-400');
+            }
+
+            if (tab === 'historico') {
+                exibirHistorico();
+            } else if (tab === 'aovivo') {
+                verifyBookmakerLogin();
+            }
+        }
+
+        // ==========================================
+        // ATUALIZAÇÃO DE SUGESTÃO (RELOAD)
+        // ==========================================
+
+        function atualizarSugestao() {
+            const config = carregarConfiguracoes();
+            const params = new URLSearchParams({
+                quantidade: config.quantidade,
+                incluir_protecoes: config.incluir_protecoes,
+                max_protecoes: config.max_protecoes,
+                incluir_zero: config.incluir_zero,
+                limite_historico: config.limite_historico,
+                w_master: config.w_master,
+                w_estelar: config.w_estelar,
+                w_chain: config.w_chain,
+                w_temporal: config.w_temporal
+            });
+
+            if (config.target_time) {
+                params.append('target_time', config.target_time);
+            }
+            if (config.interval_minutes) {
+                params.append('interval_minutes', config.interval_minutes);
+            }
+            if (config.days_back) {
+                params.append('days_back', config.days_back);
+            }
+
+            const url = window.location.pathname + '?' + params.toString();
+            window.location.href = url;
+        }
+
+        // ==========================================
+        // INICIALIZAÇÃO
+        // ==========================================
+
+        window.addEventListener('load', () => {
+            const config = carregarConfiguracoes();
+            preencherFormulario(config);
+            atualizarSomaPesos();
+            
+            if (!config.target_time) {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                document.getElementById('config-target-time').value = `${hours}:${minutes}`;
+            }
+            
+            const dadosAtuais = {{ dados | tojson | safe }};
+            let currentAnalise = dadosAtuais;
+
+            salvarNoHistorico(currentAnalise);
+            renderLiveSugestao(currentAnalise);
+
+            initAoVivo();
+
+            showTab('sugestao');
+        });
+    </script>
+</body>
+</html>

@@ -14,7 +14,6 @@ from fastapi.templating import Jinja2Templates
 # Importar padrões quando implementados
 from patterns.master import PatternMaster
 from patterns.estelar import PatternEstelar  
-from patterns.chain import ChainPattern      # TODO
 
 templates = Jinja2Templates(directory="templates")
 

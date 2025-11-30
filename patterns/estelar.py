@@ -216,7 +216,7 @@ class PatternEstelar(BasePattern):
         self.relation_weights: Dict[str, float] = dict(relation_weights)
 
         # Raio de vizinhos para montar a aposta (em torno do after_value)
-        self.neighbor_radius: int = self.get_config_value("neighbor_radius", 1)
+        self.neighbor_radius: int = self.get_config_value("neighbor_radius", 2)
 
         # Quantos números recentes testar (ex: 5 → numbers[0]..numbers[4])
         self.max_offsets: int = self.get_config_value("max_offsets", 5)
@@ -354,8 +354,8 @@ class PatternEstelar(BasePattern):
 
         # 1) Próprio número e ±1
         bet_set.add(center)
-        bet_set.add(center - 1)
-        bet_set.add(center + 1)
+        bet_set.add(center - 2)
+        bet_set.add(center + 2)
 
         # 2) Vizinhos de cilindro
         neighbors = get_neighbors(center, radius=self.neighbor_radius)
@@ -394,8 +394,10 @@ class PatternEstelar(BasePattern):
                 rel_factor = 1.0
             elif n in {center - 1, center + 1}:
                 rel_factor = 0.9
+            elif n in {center - 2, center + 2}:
+                rel_factor = 0.7
             elif n in neighbors:
-                rel_factor = 0.85
+                rel_factor = 0.9
             elif n in mirrors:
                 rel_factor = 0.8
             elif isinstance(same_terminal, (list, tuple, set)) and n in same_terminal:
@@ -403,7 +405,7 @@ class PatternEstelar(BasePattern):
             elif isinstance(figure_numbers, (list, tuple, set)) and n in figure_numbers:
                 rel_factor = 0.6
             else:
-                rel_factor = 0.5
+                rel_factor = 0.3
 
             scores[n] = base_relation_score * rel_factor
 
@@ -430,7 +432,7 @@ class PatternEstelar(BasePattern):
         }
 
         return PatternResult(
-            candidatos=bet,
+            candidatos=bet[:12],
             scores=scores,
             metadata=metadata,
             pattern_name=self.name,

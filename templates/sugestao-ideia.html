@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analizer Master + Estelar + Chain + Puxadas + Temporal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+        }
+        .numero-chip {
+            transition: all 0.3s ease;
+        }
+        .numero-chip:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+        }
+        .tab-button {
+            border-bottom-width: 2px;
+            border-color: transparent;
+        }
+        .tab-button.active {
+            border-color: #3b82f6;
+            color: #ffffff;
+        }
+        .tab-button.inactive {
+            color: #9ca3af;
+        }
+        .pattern-tag {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.15rem 0.5rem;
+            border-radius: 9999px;
+        }
+        .pattern-master {
+            background: rgba(59, 130, 246, 0.15);
+            color: #bfdbfe;
+        }
+        .pattern-estelar {
+            background: rgba(168, 85, 247, 0.15);
+            color: #e9d5ff;
+        }
+        .pattern-chain {
+            background: rgba(52, 211, 153, 0.15);
+            color: #bbf7d0;
+        }
+        .pattern-puxadas {
+            background: rgba(251, 191, 36, 0.15);
+            color: #fef3c7;
+        }
+        .pattern-temporal {
+            background: rgba(248, 113, 113, 0.15);
+            color: #fee2e2;
+        }
+        .history-item-recent {
+            background: rgba(59, 130, 246, 0.2);
+        }
+        .consenso-total {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.4));
+        }
+        .consenso-triplo {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(79, 70, 229, 0.4));
+        }
+        .consenso-duplo {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.4));
+        }
+        .live-status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 9999px;
+        }
+        .live-status-dot.connected {
+            background-color: #22c55e;
+            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.3);
+        }
+        .live-status-dot.disconnected {
+            background-color: #ef4444;
+            box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.3);
+        }
+        .config-section {
+            border-radius: 0.75rem;
+            background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.1), transparent 55%),
+                        radial-gradient(circle at bottom right, rgba(168, 85, 247, 0.1), transparent 55%),
+                        rgba(15, 23, 42, 0.8);
+        }
+        .config-badge {
+            border-radius: 9999px;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .protecao-badge {
+            border-radius: 9999px;
+            padding: 0.15rem 0.5rem;
+            font-size: 0.70rem;
+            font-weight: 600;
+        }
+        .protecao-espelho {
+            background: rgba(59, 130, 246, 0.15);
+            color: #bfdbfe;
+        }
+        .protecao-vizinho {
+            background: rgba(16, 185, 129, 0.15);
+            color: #bbf7d0;
+        }
+        .protecao-terminal {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fed7aa;
+        }
+        .protecao-zero {
+            background: rgba(248, 113, 113, 0.15);
+            color: #fee2e2;
+        }
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background-color: rgba(148, 163, 184, 0.6);
+            border-radius: 9999px;
+        }
+    </style>
+</head>
+<body class="text-gray-100">
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Cabeçalho -->
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl md:text-4xl font-extrabold text-white flex items-center gap-3">
+                    <span class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-emerald-400">
+                        🎰
+                    </span>
+                    <span>Analizer MASTER · ESTELAR · CHAIN · PUXADAS · TEMPORAL</span>
+                </h1>
+                <p class="mt-2 text-gray-300 max-w-2xl">
+                    Combinação inteligente dos padrões MASTER, ESTELAR, CHAIN, PUXADAS e TEMPORAL para sugerir entradas
+                    com base em histórico, região da roleta e comportamento recente da mesa.
+                </p>
+            </div>
+
+            <!-- Status / Info -->
+            <div class="bg-gray-800/70 border border-gray-700 rounded-xl p-4 w-full md:w-auto">
+                <div class="flex items-center justify-between gap-4">
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-gray-400">Modo de Operação</p>
+                        <p class="text-sm font-semibold text-white">
+                            Ensemble Padrões · <span class="text-blue-400">Análise Local</span>
+                        </p>
+                        <p class="text-xs text-gray-500 mt-1">
+                            Os pesos podem ser ajustados no painel de configurações abaixo.
+                        </p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs uppercase tracking-wide text-gray-400">Última Análise</p>
+                        <p class="text-sm font-semibold text-emerald-400">
+                            {% if dados.analise.horario %}{{ dados.analise.horario }}{% else %}--:--{% endif %}
+                        </p>
+                        <p class="text-xs text-gray-500 mt-1">
+                            Mesa: <span class="font-mono text-gray-300">{{ dados.mesa.slug if dados.mesa else '-' }}</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="mb-6 border-b border-gray-700">
+            <nav class="flex flex-wrap -mb-px text-sm font-medium" aria-label="Tabs">
+                <button id="tab-sugestao" class="tab-button active px-4 py-3 inline-flex items-center gap-2 border-b-2">
+                    <span>🎯 Sugestão Atual</span>
+                </button>
+                <button id="tab-config" class="tab-button inactive px-4 py-3 inline-flex items-center gap-2 border-b-2">
+                    <span>⚙️ Configurações do Ensemble</span>
+                </button>
+                <button id="tab-consenso" class="tab-button inactive px-4 py-3 inline-flex items-center gap-2 border-b-2">
+                    <span>🤝 Consenso entre Padrões</span>
+                </button>
+                <button id="tab-live" class="tab-button inactive px-4 py-3 inline-flex items-center gap-2 border-b-2">
+                    <span>📡 Live com Casa de Apostas</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- Tab: Sugestão Atual -->
+        <div id="content-sugestao" class="bg-gray-800/50 backdrop-blur-sm rounded-b-xl p-6 mb-6 border border-gray-700">
+            <!-- Histórico Recente -->
+            <div class="mb-6">
+                <h2 class="text-xl font-bold text-white mb-4">📊 Últimos 10 números da mesa</h2>
+                <div class="flex flex-wrap gap-2">
+                    {% for num in dados.analise.ultimos_10 %}
+                    <span class="bg-gray-600 text-white px-4 py-2 rounded-lg font-bold">{{ num }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Sugestões Principais -->
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-white mb-4">🎲 Números Sugeridos ({{ dados.sugestoes.principais|length }})</h2>
+                {% if dados.analise.confidence_index is defined %}
+                <div class="mb-4 flex items-center justify-between">
+                    <div class="text-sm text-blue-100">
+                        Nível de confiança da previsão
+                    </div>
+                    <div class="flex items-center gap-3 w-64">
+                        <div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
+                            <div class="h-full bg-emerald-400" style="width: {{ (dados.analise.confidence_index or 0) * 100 }}%;"></div>
+                        </div>
+                        <span class="text-sm font-semibold text-emerald-300">
+                            {{ "%.0f"|format((dados.analise.confidence_index or 0) * 100) }}%
+                        </span>
+                    </div>
+                </div>
+                {% endif %}
+                <div class="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+                    {% for sugestao in dados.sugestoes.principais %}
+                    <div class="numero-chip bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-4 text-center shadow-lg">
+                        <div class="text-3xl font-bold text-white">{{ sugestao.numero }}</div>
+                        <div class="text-xs text-blue-200 mt-1">{{ "%.1f"|format(sugestao.score * 100) }}%</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Proteções -->
+            {% if dados.sugestoes.protecoes|length > 0 %}
+            <div class="mb-6">
+                <h2 class="text-xl font-bold text-white mb-4">🛡️ Proteções ({{ dados.sugestoes.protecoes|length }})</h2>
+                <div class="grid grid-cols-6 md:grid-cols-10 lg:grid-cols-12 gap-2">
+                    {% for protecao in dados.sugestoes.protecoes %}
+                    <div class="bg-gray-700 rounded-lg p-3 text-center">
+                        <div class="text-xl font-bold text-white">{{ protecao.numero }}</div>
+                        <div class="mt-2 flex flex-wrap justify-center gap-1">
+                            {% if 'ESP' in protecao.origem %}
+                            <span class="protecao-badge protecao-espelho">Espelho</span>
+                            {% endif %}
+                            {% if 'VIZ' in protecao.origem %}
+                            <span class="protecao-badge protecao-vizinho">Vizinho</span>
+                            {% endif %}
+                            {% if 'TERM' in protecao.origem %}
+                            <span class="protecao-badge protecao-terminal">Terminal</span>
+                            {% endif %}
+                            {% if protecao.numero == 0 %}
+                            <span class="protecao-badge protecao-zero">Zero</span>
+                            {% endif %}
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1">{{ protecao.tipo }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Consenso -->
+            <div class="mb-6">
+                <h2 class="text-xl font-bold text-white mb-4">🤝 Consenso entre Padrões</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    
+                    <!-- Total (5/5) -->
+                    {% if dados.analise.consenso.consenso_total|length > 0 %}
+                    <div class="consenso-total rounded-xl p-4 shadow-lg">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">💎</span>
+                            <h3 class="text-white font-bold">Total (5/5 padrões)</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            {% for num in dados.analise.consenso.consenso_total %}
+                            <span class="bg-white/20 text-white px-3 py-1 rounded-full font-bold">{{ num }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Triplo (3/5) -->
+                    {% if dados.analise.consenso.consenso_triplo %}
+                    <div class="consenso-triplo rounded-xl p-4 shadow-lg">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">🔺</span>
+                            <h3 class="text-white font-bold">Triplo (3/5)</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            {% for tipo, numeros in dados.analise.consenso.consenso_triplo.items() %}
+                                {% for num in numeros %}
+                                <span class="bg-white/20 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Duplo (2/5) -->
+                    {% if dados.analise.consenso.consenso_duplo %}
+                    <div class="consenso-duplo rounded-xl p-4 shadow-lg">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">🔹</span>
+                            <h3 class="text-white font-bold">Duplo (2/5)</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            {% for tipo, numeros in dados.analise.consenso.consenso_duplo.items() %}
+                                {% for num in numeros %}
+                                <span class="bg-white/20 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Configurações -->
+        <div id="content-config" class="hidden bg-gray-800/50 backdrop-blur-sm rounded-b-xl p-6 mb-6 border border-gray-700">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Pesos dos Padrões -->
+                <div class="config-section p-5 border border-gray-700">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <span>⚖️ Pesos dos Padrões</span>
+                        </h2>
+                        <span class="config-badge bg-blue-500/20 text-blue-300 border border-blue-500/40">
+                            Ensemble
+                        </span>
+                    </div>
+
+                    <p class="text-sm text-gray-300 mb-4">
+                        Ajuste o peso de influência de cada padrão na sugestão final. Os pesos são normalizados
+                        automaticamente para somarem 1.0.
+                    </p>
+
+                    <div class="space-y-4">
+                        <!-- Peso MASTER -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                🧠 Peso MASTER
+                                <span class="text-gray-500 text-xs">(0.0 - 1.0)</span>
+                            </label>
+                            <input type="number" id="config-w-master" name="w_master" min="0" max="1" step="0.05"
+                                   class="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none"
+                                   value="0.20">
+                            <p class="text-xs text-gray-500 mt-1">Padrão base, estrutura geral da mesa</p>
+                        </div>
+
+                        <!-- Peso ESTELAR -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                ⭐ Peso ESTELAR
+                                <span class="text-gray-500 text-xs">(0.0 - 1.0)</span>
+                            </label>
+                            <input type="number" id="config-w-estelar" name="w_estelar" min="0" max="1" step="0.05"
+                                   class="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:border-purple-500 focus:outline-none"
+                                   value="0.20">
+                            <p class="text-xs text-gray-500 mt-1">Equivalências e substituições</p>
+                        </div>
+
+                        <!-- Peso CHAIN -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                🔗 Peso CHAIN
+                                <span class="text-gray-500 text-xs">(0.0 - 1.0)</span>
+                            </label>
+                            <input type="number" id="config-w-chain" name="w_chain" min="0" max="1" step="0.05"
+                                   class="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:border-emerald-500 focus:outline-none"
+                                   value="0.20">
+                            <p class="text-xs text-gray-500 mt-1">Narrativa e dívidas da mesa</p>
+                        </div>
+
+                        <!-- Peso PUXADAS -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                🎯 Peso PUXADAS
+                                <span class="text-gray-500 text-xs">(0.0 - 1.0)</span>
+                            </label>
+                            <input type="number" id="config-w-puxadas" name="w_puxadas" min="0" max="1" step="0.05"
+                                   class="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:border-yellow-500 focus:outline-none"
+                                   value="0.20">
+                            <p class="text-xs text-gray-500 mt-1">Puxadas diretas do histórico</p>
+                        </div>
+
+                        <!-- Peso TEMPORAL -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                ⏰ Peso TEMPORAL
+                                <span class="text-gray-500 text-xs">(0.0 - 1.0)</span>
+                            </label>
+                            <input type="number" id="config-w-temporal" name="w_temporal" min="0" max="1" step="0.05"
+                                   class="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:border-red-500 focus:outline-none"
+                                   value="0.20">
+                            <p class="text-xs text-gray-500 mt-1">Frequência por horário</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Proteções -->
+                <div class="config-section p-5 border border-gray-700">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <span>🛡️ Proteções</span>
+                        </h2>
+                        <span class="config-badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                            Região
+                        </span>
+                    </div>
+
+                    <p class="text-sm text-gray-300 mb-4">
+                        Defina quantos números de proteção incluir ao redor dos núcleos principais:
+                        espelhos, vizinhos e terminais.
+                    </p>
+
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-gray-300 text-sm block mb-2">
+                                    Proteções por Núcleo
+                                    <span class="text-gray-500 text-xs">(0-10)</span>
+                                </label>
+                                <input type="number" id="config-protecao-por-nucleo" name="protecao_por_nucleo" min="0" max="10" 
+                                       class="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:border-emerald-500 focus:outline-none"
+                                       value="4">
+                            </div>
+                            <div>
+                                <label class="text-gray-300 text-sm block mb-2">
+                                    Máximo de Proteções
+                                    <span class="text-gray-500 text-xs">(0-10)</span>
+                                </label>
+                                <input type="number" id="config-max-protecoes" name="max_protecoes" min="0" max="10" 
+                                       class="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none"
+                                       value="6">
+                            </div>
+                        </div>
+
+                        <!-- Checkboxes -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <div class="flex items-center">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="checkbox" id="config-incluir-protecoes" name="incluir_protecoes" checked
+                                           class="w-5 h-5 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 text-blue-600">
+                                    <span class="ml-3 text-gray-300">Incluir Proteções (espelhos, vizinhos)</span>
+                                </label>
+                            </div>
+
+                            <div class="flex items-center">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="checkbox" id="config-incluir-zero" name="incluir_zero" checked
+                                           class="w-5 h-5 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 text-blue-600">
+                                    <span class="ml-3 text-gray-300">Sempre incluir Zero nas proteções</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Parâmetros Temporais -->
+                <div class="config-section p-5 border border-gray-700">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <span>⏱️ Parâmetros Temporais</span>
+                        </h2>
+                        <span class="config-badge bg-red-500/20 text-red-300 border border-red-500/40">
+                            Temporal
+                        </span>
+                    </div>
+
+                    <p class="text-sm text-gray-300 mb-4">
+                        Ajuste o intervalo em minutos e a profundidade de dias para o padrão temporal.
+                        Quanto maior o histórico, mais estável a leitura; quanto menor o intervalo,
+                        mais específica a janela de horário.
+                    </p>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                Intervalo (minutos)
+                                <span class="text-gray-500 text-xs">(1-30)</span>
+                            </label>
+                            <input type="number" id="config-interval-minutes" name="interval_minutes" min="1" max="30"
+                                   class="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:border-red-500 focus:outline-none"
+                                   value="{{ dados.analise.interval_minutes if dados.analise.interval_minutes else 3 }}">
+                            <p class="text-xs text-gray-500 mt-1">Janela de horário em volta do alvo</p>
+                        </div>
+
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                📅 Histórico (days)
+                                <span class="text-gray-500 text-xs">(7-90)</span>
+                            </label>
+                            <input type="number" id="config-days-back" name="days_back" min="7" max="90"
+                                   class="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:border-yellow-500 focus:outline-none"
+                                   value="30">
+                            <p class="text-xs text-gray-500 mt-1">Quantos dias analisar</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botões de Ação -->
+            <div class="mt-6 flex flex-wrap gap-4">
+                <button id="btn-aplicar-configs" class="bg-gradient-to-r from-blue-600 to-blue-800 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:from-blue-500 hover:to-blue-700 transition-all flex items-center gap-2">
+                    <span>🔁 Aplicar Configurações</span>
+                </button>
+                <button id="btn-reset-configs" class="bg-gray-700 text-gray-200 font-semibold py-3 px-6 rounded-lg border border-gray-500 hover:bg-gray-600 transition-all flex items-center gap-2">
+                    <span>♻️ Resetar para Padrão</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab: Consenso Detalhado -->
+        <div id="content-consenso" class="hidden bg-gray-800/50 backdrop-blur-sm rounded-b-xl p-6 mb-6 border border-gray-700">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- MASTER -->
+                <div class="bg-gray-900/80 border border-blue-600/40 rounded-xl p-5">
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="text-lg font-bold text-blue-200 flex items-center gap-2">
+                            <span>🧠 MASTER</span>
+                        </h2>
+                        <span class="pattern-tag pattern-master">Padrão Base</span>
+                    </div>
+                    <p class="text-sm text-gray-300 mb-3">
+                        Estrutura base da mesa, combinando frequência, intervalos e estabilidade.
+                    </p>
+                    <div class="flex flex-wrap gap-2 mb-3">
+                        {% for num in dados.analise.master_numeros %}
+                        <span class="bg-blue-500/20 text-blue-100 px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
+                        {% endfor %}
+                    </div>
+                    <p class="text-xs text-gray-500">
+                        Total de candidatos MASTER: <span class="font-semibold text-gray-300">{{ dados.analise.master_numeros|length }}</span>
+                    </p>
+                </div>
+
+                <!-- ESTELAR -->
+                <div class="bg-gray-900/80 border border-purple-600/40 rounded-xl p-5">
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="text-lg font-bold text-purple-200 flex items-center gap-2">
+                            <span>⭐ ESTELAR</span>
+                        </h2>
+                        <span class="pattern-tag pattern-estelar">Equivalências</span>
+                    </div>
+                    <p class="text-sm text-gray-300 mb-3">
+                        Padrão de substituições por espelhos, vizinhos, terminais e comportamentos equivalentes.
+                    </p>
+                    <div class="flex flex-wrap gap-2 mb-3">
+                        {% for num in dados.analise.estelar_numeros %}
+                        <span class="bg-purple-500/20 text-purple-100 px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
+                        {% endfor %}
+                    </div>
+                    <p class="text-xs text-gray-500">
+                        Total de candidatos ESTELAR: <span class="font-semibold text-gray-300">{{ dados.analise.estelar_numeros|length }}</span>
+                    </p>
+                </div>
+
+                <!-- CHAIN -->
+                <div class="bg-gray-900/80 border border-emerald-600/40 rounded-xl p-5">
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="text-lg font-bold text-emerald-200 flex items-center gap-2">
+                            <span>🔗 CHAIN</span>
+                        </h2>
+                        <span class="pattern-tag pattern-chain">Narrativa</span>
+                    </div>
+                    <p class="text-sm text-gray-300 mb-3">
+                        Leitura narrativa das dívidas da mesa: crescentes, triangulações, eixos e pagamentos pendentes.
+                    </p>
+                    <div class="flex flex-wrap gap-2 mb-3">
+                        {% for num in dados.analise.chain_numeros %}
+                        <span class="bg-emerald-500/20 text-emerald-100 px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
+                        {% endfor %}
+                    </div>
+                    <p class="text-xs text-gray-500">
+                        Total de candidatos CHAIN: <span class="font-semibold text-gray-300">{{ dados.analise.chain_numeros|length }}</span>
+                    </p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                <!-- PUXADAS -->
+                <div class="bg-gray-900/80 border border-yellow-600/40 rounded-xl p-5">
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="text-lg font-bold text-yellow-200 flex items-center gap-2">
+                            <span>🎯 PUXADAS</span>
+                        </h2>
+                        <span class="pattern-tag pattern-puxadas">Gatilhos</span>
+                    </div>
+                    <p class="text-sm text-gray-300 mb-3">
+                        Relações diretas de puxada: qual número tende a vir após outro, com base em histórico real.
+                    </p>
+                    <div class="flex flex-wrap gap-2 mb-3">
+                        {% for num in dados.analise.puxadas_numeros %}
+                        <span class="bg-yellow-500/20 text-yellow-100 px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
+                        {% endfor %}
+                    </div>
+                    <p class="text-xs text-gray-500">
+                        Total de candidatos PUXADAS: <span class="font-semibold text-gray-300">{{ dados.analise.puxadas_numeros|length }}</span>
+                    </p>
+                </div>
+
+                <!-- TEMPORAL -->
+                <div class="bg-gray-900/80 border border-red-600/40 rounded-xl p-5">
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="text-lg font-bold text-red-200 flex items-center gap-2">
+                            <span>⏰ TEMPORAL</span>
+                        </h2>
+                        <span class="pattern-tag pattern-temporal">Horário</span>
+                    </div>
+                    <p class="text-sm text-gray-300 mb-3">
+                        Frequência de números por horário, considerando dias históricos e janela de minutos configurada.
+                    </p>
+                    <div class="flex flex-wrap gap-2 mb-3">
+                        {% for num in dados.analise.temporal_numeros %}
+                        <span class="bg-red-500/20 text-red-100 px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
+                        {% endfor %}
+                    </div>
+                    <p class="text-xs text-gray-500">
+                        Total de candidatos TEMPORAL: <span class="font-semibold text-gray-300">{{ dados.analise.temporal_numeros|length }}</span>
+                    </p>
+                </div>
+            </div>
+
+            <div class="mt-8">
+                <h2 class="text-xl font-bold text-white mb-3">📌 Resumo do Consenso</h2>
+                <div class="bg-gray-900/80 border border-gray-700 rounded-xl p-4">
+                    <p class="text-sm text-gray-300 mb-2">
+                        Aqui você enxerga como os padrões se cruzam. Números que aparecem em 3, 4 ou 5 padrões diferentes
+                        têm uma força estrutural maior na leitura da mesa.
+                    </p>
+                    <p class="text-sm text-gray-400">
+                        Use isso para reforçar núcleos principais, filtrar ruído e decidir quando vale aumentar ou reduzir exposição.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Live com Casa de Apostas -->
+        <div id="content-live" class="hidden bg-gray-800/50 backdrop-blur-sm rounded-b-xl p-6 mb-6 border border-gray-700">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Configurações Live -->
+                <div class="bg-gray-900/80 border border-gray-700 rounded-xl p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <span>📡 Controle Live</span>
+                        </h2>
+                        <div class="flex items-center gap-2">
+                            <div id="live-status-dot" class="live-status-dot disconnected"></div>
+                            <span id="live-status-text" class="text-xs font-semibold text-red-400">
+                                Desconectado
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">ID / Código da Mesa</label>
+                            <input type="text" id="live-game-id"
+                                   class="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none"
+                                   placeholder="Ex: pragmatic-brazilian-roulette">
+                            <p class="text-xs text-gray-500 mt-1">
+                                Use o mesmo identificador utilizado no collector / monitor da casa de apostas.
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">URL da Mesa (opcional)</label>
+                            <input type="text" id="live-game-url"
+                                   class="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none"
+                                   placeholder="https://...">
+                            <p class="text-xs text-gray-500 mt-1">
+                                Se preenchido, a mesa será carregada no iframe ao lado.
+                            </p>
+                        </div>
+
+                        <div class="flex flex-wrap gap-3">
+                            <button id="btn-start-live" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-4 rounded-lg transition-all flex items-center justify-center gap-2">
+                                <span>▶️ Iniciar Live</span>
+                            </button>
+                            <button id="btn-stop-live" class="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition-all flex items-center justify-center gap-2" disabled>
+                                <span>⏹️ Parar</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-6">
+                        <h3 class="text-sm font-semibold text-gray-200 mb-2">Log de Sugestões em Tempo Real</h3>
+                        <div id="live-log" class="bg-gray-950/80 border border-gray-700 rounded-lg p-3 h-64 overflow-y-auto text-xs leading-relaxed font-mono scrollbar-thin">
+                            <p class="text-gray-500">Aguardando conexão...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Iframe da Mesa -->
+                <div class="lg:col-span-2">
+                    <div class="bg-gray-900/80 border border-gray-700 rounded-xl p-4 h-full flex flex-col">
+                        <div class="flex items-center justify-between mb-3">
+                            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                                <span>🎛️ Visualização da Mesa</span>
+                            </h2>
+                            <button id="btn-refresh-live" class="bg-gray-700 hover:bg-gray-600 text-gray-100 text-xs font-semibold py-1 px-3 rounded-lg flex items-center gap-1">
+                                <span>🔄 Recarregar</span>
+                            </button>
+                        </div>
+                        <div class="flex-1 relative rounded-lg overflow-hidden bg-black">
+                            <iframe id="live-iframe" src="" class="w-full h-full border-0 hidden"></iframe>
+                            <div id="live-iframe-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-gray-500 text-sm gap-2">
+                                <span>Informe a URL da mesa e clique em "Iniciar Live" para carregar aqui.</span>
+                                <span class="text-xs text-gray-600">Ou acompanhe apenas o log em tempo real ao lado.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configurações de Integração -->
+            <div class="mt-6 bg-gray-900/80 border border-gray-700 rounded-xl p-5">
+                <h3 class="text-sm font-semibold text-gray-200 mb-2">Integração com Casa de Apostas (Status)</h3>
+                <p class="text-xs text-gray-400 mb-2">
+                    Este painel não clica automaticamente na mesa; ele se integra com o seu collector que já captura
+                    os resultados em tempo real e envia para a API / ensemble.
+                </p>
+                <p class="text-xs text-gray-500">
+                    É apenas um painel de visualização e controle para acompanhar o que o robô está sugerindo enquanto você
+                    assiste a mesa em tempo real.
+                </p>
+            </div>
+        </div>
+
+        <!-- Rodapé -->
+        <div class="mt-8 text-center text-xs text-gray-500">
+            <p>RevesBot · Ensemble Master + Estelar + Chain + Puxadas + Temporal</p>
+            <p class="text-gray-600 mt-1">Ferramenta de apoio à análise de roletas · Não garante resultados financeiros.</p>
+        </div>
+    </div>
+
+    <script>
+        // Tabs
+        const tabs = {
+            "tab-sugestao": "content-sugestao",
+            "tab-config": "content-config",
+            "tab-consenso": "content-consenso",
+            "tab-live": "content-live"
+        };
+
+        function setActiveTab(tabId) {
+            for (const [btnId, contentId] of Object.entries(tabs)) {
+                const btn = document.getElementById(btnId);
+                const content = document.getElementById(contentId);
+                if (!btn || !content) continue;
+
+                if (btnId === tabId) {
+                    btn.classList.add("active");
+                    btn.classList.remove("inactive");
+                    content.classList.remove("hidden");
+                } else {
+                    btn.classList.remove("active");
+                    btn.classList.add("inactive");
+                    content.classList.add("hidden");
+                }
+            }
+        }
+
+        document.getElementById("tab-sugestao")?.addEventListener("click", () => setActiveTab("tab-sugestao"));
+        document.getElementById("tab-config")?.addEventListener("click", () => setActiveTab("tab-config"));
+        document.getElementById("tab-consenso")?.addEventListener("click", () => setActiveTab("tab-consenso"));
+        document.getElementById("tab-live")?.addEventListener("click", () => setActiveTab("tab-live"));
+
+        // Config defaults (poderia ler do backend via data-attrs se quiser)
+        const configInputs = {
+            w_master: document.getElementById("config-w-master"),
+            w_estelar: document.getElementById("config-w-estelar"),
+            w_chain: document.getElementById("config-w-chain"),
+            w_puxadas: document.getElementById("config-w-puxadas"),
+            w_temporal: document.getElementById("config-w-temporal"),
+            protecao_por_nucleo: document.getElementById("config-protecao-por-nucleo"),
+            max_protecoes: document.getElementById("config-max-protecoes"),
+            incluir_protecoes: document.getElementById("config-incluir-protecoes"),
+            incluir_zero: document.getElementById("config-incluir-zero"),
+            interval_minutes: document.getElementById("config-interval-minutes"),
+            days_back: document.getElementById("config-days-back"),
+        };
+
+        const defaultConfig = {
+            w_master: 0.20,
+            w_estelar: 0.20,
+            w_chain: 0.20,
+            w_puxadas: 0.20,
+            w_temporal: 0.20,
+            protecao_por_nucleo: 4,
+            max_protecoes: 6,
+            incluir_protecoes: true,
+            incluir_zero: true,
+            interval_minutes: 3,
+            days_back: 30,
+        };
+
+        document.getElementById("btn-reset-configs")?.addEventListener("click", () => {
+            if (!configInputs.w_master) return;
+
+            configInputs.w_master.value = defaultConfig.w_master;
+            configInputs.w_estelar.value = defaultConfig.w_estelar;
+            configInputs.w_chain.value = defaultConfig.w_chain;
+            configInputs.w_puxadas.value = defaultConfig.w_puxadas;
+            configInputs.w_temporal.value = defaultConfig.w_temporal;
+            configInputs.protecao_por_nucleo.value = defaultConfig.protecao_por_nucleo;
+            configInputs.max_protecoes.value = defaultConfig.max_protecoes;
+            configInputs.incluir_protecoes.checked = defaultConfig.incluir_protecoes;
+            configInputs.incluir_zero.checked = defaultConfig.incluir_zero;
+            configInputs.interval_minutes.value = defaultConfig.interval_minutes;
+            configInputs.days_back.value = defaultConfig.days_back;
+        });
+
+        document.getElementById("btn-aplicar-configs")?.addEventListener("click", () => {
+            alert("No momento os pesos e parâmetros estão sendo aplicados apenas no backend via API. Integração dinâmica via fetch pode ser adicionada aqui se você quiser.");
+        });
+
+        // Live controls (placeholder, integrando apenas com iframe e log visual)
+        const liveStatusDot = document.getElementById("live-status-dot");
+        const liveStatusText = document.getElementById("live-status-text");
+        const liveLog = document.getElementById("live-log");
+
+        function setLiveStatus(connected, message) {
+            if (!liveStatusDot || !liveStatusText) return;
+            liveStatusDot.classList.toggle("connected", connected);
+            liveStatusDot.classList.toggle("disconnected", !connected);
+            liveStatusText.textContent = message || (connected ? "Conectado" : "Desconectado");
+        }
+
+        function appendLiveLog(text, type = "info") {
+            if (!liveLog) return;
+            const p = document.createElement("p");
+            if (type === "info") {
+                p.className = "text-gray-300";
+            } else if (type === "warn") {
+                p.className = "text-yellow-300";
+            } else if (type === "error") {
+                p.className = "text-red-400";
+            }
+            const now = new Date();
+            const hh = String(now.getHours()).padStart(2, "0");
+            const mm = String(now.getMinutes()).padStart(2, "0");
+            const ss = String(now.getSeconds()).padStart(2, "0");
+            p.textContent = `[${hh}:${mm}:${ss}] ${text}`;
+            liveLog.appendChild(p);
+            liveLog.scrollTop = liveLog.scrollHeight;
+        }
+
+        document.getElementById("btn-start-live")?.addEventListener("click", () => {
+            setLiveStatus(true, "Monitorando");
+            appendLiveLog("Live iniciada. Aguardando integrações com o collector / API...", "info");
+
+            const gameId = document.getElementById("live-game-id")?.value || "";
+            appendLiveLog(`Mesa configurada: ${gameId || "(não informado)"}`, "info");
+
+            const url = document.getElementById("live-game-url")?.value || "";
+            const iframe = document.getElementById("live-iframe");
+            const placeholder = document.getElementById("live-iframe-placeholder");
+
+            if (iframe && placeholder) {
+                if (url) {
+                    iframe.src = url;
+                    iframe.classList.remove("hidden");
+                    placeholder.classList.add("hidden");
+                    appendLiveLog(`Carregando URL da mesa no iframe.`, "info");
+                } else {
+                    iframe.src = "";
+                    iframe.classList.add("hidden");
+                    placeholder.classList.remove("hidden");
+                }
+            }
+
+            const stopBtn = document.getElementById("btn-stop-live");
+            const startBtn = document.getElementById("btn-start-live");
+            if (stopBtn && startBtn) {
+                stopBtn.disabled = false;
+                startBtn.disabled = true;
+            }
+        });
+
+        document.getElementById("btn-stop-live")?.addEventListener("click", () => {
+            setLiveStatus(false, "Desconectado");
+            appendLiveLog("Live interrompida pelo usuário.", "warn");
+
+            const stopBtn = document.getElementById("btn-stop-live");
+            const startBtn = document.getElementById("btn-start-live");
+            if (stopBtn && startBtn) {
+                stopBtn.disabled = true;
+                startBtn.disabled = false;
+            }
+        });
+
+        document.getElementById("btn-refresh-live")?.addEventListener("click", () => {
+            const iframe = document.getElementById("live-iframe");
+            if (iframe && !iframe.classList.contains("hidden")) {
+                iframe.contentWindow.location.reload();
+                appendLiveLog("Iframe recarregado.", "info");
+            } else {
+                appendLiveLog("Não há mesa carregada no iframe para recarregar.", "warn");
+            }
+        });
+
+        // Inicia na aba Sugestão
+        setActiveTab("tab-sugestao");
+    </script>
+</body>
+</html>

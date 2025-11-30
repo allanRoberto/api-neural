@@ -11,12 +11,21 @@ Ideia geral:
     - quem aparece com frequência como puxada de âncoras fortes;
     - quem ainda não "pagou" no capítulo recente (dívida).
 - Penaliza números ultra recentes e monta um ranking final.
+
+ADAPTAÇÃO:
+- scores agora são um "campo de força" completo:
+    - seguidores diretos das âncoras
+    - vizinhos dos seguidores
+    - espelhos dos seguidores
+- PatternResult.scores contém o mapa COMPLETO normalizado (0–1),
+  e candidatos são apenas o top N desse mapa.
 """
 
 from typing import List, Dict, Any, Tuple
 from collections import Counter
 
 from .base import BasePattern, PatternResult
+from helpers.utils.filters import get_neighbords, get_mirror
 
 
 class ChainPattern(BasePattern):
@@ -27,11 +36,16 @@ class ChainPattern(BasePattern):
         Lista de números, com o MAIS RECENTE na posição 0.
     """
 
+    # pesos para propagação da "força" do Chain
+    W_SELF = 1.0        # peso do próprio número
+    W_NEIGHBOR = 0.6    # peso propagado para vizinhos
+    W_MIRROR = 0.4      # peso propagado para espelhos
+
     def analyze(self, history: List[int]) -> PatternResult:
         """
         Analisa o histórico e retorna um PatternResult com:
         - candidatos: lista de números ordenados (ranking)
-        - scores: dict {número: score_normalizado}
+        - scores: dict {número: score_normalizado} (MAPA COMPLETO)
         - metadata: informações adicionais (âncoras, janelas, etc.)
         """
         # Validação básica de histórico
@@ -56,7 +70,7 @@ class ChainPattern(BasePattern):
         min_anchor_repeats = self.get_config_value("min_anchor_repeats", 2)
         max_anchors = self.get_config_value("max_anchors", 5)
         max_anchor_occurrences = self.get_config_value("max_anchor_occurrences", 4)
-        top_candidates = self.get_config_value("top_candidates", 18)
+        top_candidates = self.get_config_value("top_candidates", 12)
 
         # Trabalhar com histórico cronológico (mais antigo primeiro)
         # history[0] é o mais recente -> invertendo
@@ -75,19 +89,44 @@ class ChainPattern(BasePattern):
             if c >= min_anchor_repeats
         ][:max_anchors]
 
-        # Se não houver âncoras, faz fallback para frequência simples
+        # =========================
+        # Fallback: sem âncoras => frequência simples
+        # =========================
         if not anchors:
             freq = Counter(chapter)
-            scores_freq = {num: float(c) for num, c in freq.items()}
-            scores_norm = self.normalize_scores(scores_freq)
+            base_scores = {num: float(c) for num, c in freq.items()}
+
+            # Aplica dívida/recência + vizinhos/espelhos
+            chain_scores = self._build_chain_scores(
+                hist=hist,
+                chapter=chapter,
+                base_scores=base_scores,
+            )
+
+            if not chain_scores:
+                return PatternResult(
+                    candidatos=[],
+                    scores={},
+                    metadata={
+                        "mode": "fallback_frequency_empty",
+                        "chapter_size": len(chapter),
+                        "history_size": len(hist),
+                    },
+                    pattern_name=self.name,
+                )
+
+            scores_norm_full = self.normalize_scores(chain_scores)
             ordenados = sorted(
-                scores_norm.items(), key=lambda x: x[1], reverse=True
-            )[:top_candidates]
-            candidatos = [num for num, _ in ordenados]
+                scores_norm_full.items(),
+                key=lambda x: x[1],
+                reverse=True
+            )
+
+            candidatos = [num for num, _ in ordenados[:top_candidates]]
 
             return PatternResult(
                 candidatos=candidatos,
-                scores={num: score for num, score in ordenados},
+                scores=scores_norm_full,
                 metadata={
                     "mode": "fallback_frequency",
                     "chapter_size": len(chapter),
@@ -139,7 +178,7 @@ class ChainPattern(BasePattern):
             # Peso da âncora: quanto mais aparece, mais forte
             weight_anchor = 1.0 + (occ - 1) * 0.3
 
-            # Contribuição da âncora para os scores
+            # Contribuição da âncora para os scores "brutos" de Chain
             for num, c in followers_primary.items():
                 primary_scores[num] = primary_scores.get(num, 0.0) + (c / occ) * weight_anchor
 
@@ -175,36 +214,26 @@ class ChainPattern(BasePattern):
             )
 
         # =========================
-        # 4) Ajustes de "dívida" e recência
+        # 4) Aplicar dívida, recência e campo de força (vizinhos + espelhos)
         # =========================
-        # Dívida: números que ainda não apareceram no capítulo recente
-        set_chapter = set(chapter)
-        for num in combined_scores:
-            if num not in set_chapter:
-                combined_scores[num] *= 1.2  # leve bônus
-
-        # Penalizar números ultra recentes (últimos 3)
-        recent_block = hist[-3:]
-        recent_set = set(recent_block)
-        for num in combined_scores:
-            if num in recent_set:
-                combined_scores[num] *= 0.6
-
-        # Remover o último número (mais recente de todos) do ranking
-        ultimo_numero = hist[-1]
-        if ultimo_numero in combined_scores:
-            combined_scores.pop(ultimo_numero)
+        chain_scores = self._build_chain_scores(
+            hist=hist,
+            chapter=chapter,
+            base_scores=combined_scores,
+        )
 
         # =========================
         # 5) Normalizar e montar ranking final
         # =========================
-        scores_norm = self.normalize_scores(combined_scores)
-        ordenados = sorted(
-            scores_norm.items(), key=lambda x: x[1], reverse=True
-        )[:top_candidates]
+        scores_norm_full = self.normalize_scores(chain_scores)
 
-        candidatos = [num for num, _ in ordenados]
-        scores_final = {num: score for num, score in ordenados}
+        ordenados = sorted(
+            scores_norm_full.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )
+
+        candidatos = [num for num, _ in ordenados[:top_candidates]]
 
         # Rankings separados por janela (útil para debug / dashboard)
         norm_primary = self.normalize_scores(primary_scores)
@@ -231,8 +260,84 @@ class ChainPattern(BasePattern):
         }
 
         return PatternResult(
-            candidatos=candidatos,
-            scores=scores_final,
+            candidatos=candidatos[:12],
+            scores=scores_norm_full,
             metadata=metadata,
             pattern_name=self.name,
         )
+
+    # ======================================================================
+    # Helpers internos do padrão Chain
+    # ======================================================================
+
+    def _build_chain_scores(
+        self,
+        hist: List[int],
+        chapter: List[int],
+        base_scores: Dict[int, float],
+    ) -> Dict[int, float]:
+        """
+        Aplica:
+        - bônus de dívida (números que ainda não apareceram no capítulo);
+        - penalização por recência (últimos 3 giros);
+        - remoção do último número;
+        - propagação de força para vizinhos e espelhos.
+
+        Retorna um dict {numero: score_final} (AINDA NÃO NORMALIZADO).
+        """
+        if not base_scores:
+            return {}
+
+        # Copiar para não alterar dict externo
+        scores = dict(base_scores)
+
+        # 1) Dívida: números que ainda não saíram no capítulo recente
+        set_chapter = set(chapter)
+        for num in list(scores.keys()):
+            if num not in set_chapter:
+                scores[num] *= 1.2  # leve bônus
+
+        # 2) Penalizar números ultra recentes (últimos 3)
+        recent_block = hist[-3:] if len(hist) >= 3 else hist
+        recent_set = set(recent_block)
+        for num in list(scores.keys()):
+            if num in recent_set:
+                scores[num] *= 0.6
+
+        # 3) Remover o último número (mais recente de todos) do ranking
+        if hist:
+            ultimo_numero = hist[-1]
+            if ultimo_numero in scores:
+                scores.pop(ultimo_numero)
+
+        # 4) Campo de força: propagar para vizinhos e espelhos
+        spread_scores: Dict[int, float] = {}
+
+        for num, base_val in scores.items():
+            # próprio número
+            spread_scores[num] = spread_scores.get(num, 0.0) + base_val * self.W_SELF
+
+            # vizinhos
+            try:
+                neighbors = get_neighbords(num)
+            except Exception:
+                neighbors = []
+
+            for viz in neighbors:
+                if 0 <= viz <= 36:
+                    spread_scores[viz] = spread_scores.get(viz, 0.0) + base_val * self.W_NEIGHBOR
+
+            # espelhos
+            try:
+                mirrors = get_mirror(num)
+            except Exception:
+                mirrors = []
+
+            if isinstance(mirrors, int):
+                mirrors = [mirrors]
+
+            for esp in mirrors:
+                if 0 <= esp <= 36:
+                    spread_scores[esp] = spread_scores.get(esp, 0.0) + base_val * self.W_MIRROR
+
+        return spread_scores
