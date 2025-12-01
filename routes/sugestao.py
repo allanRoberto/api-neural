@@ -56,6 +56,7 @@ def calcular_indice_confianca_global(
     resultado_chain: PatternResult,
     resultado_temporal: PatternResult,
     resultado_quente: PatternResult,
+    resultado_comport: PatternResult,
 ) -> Dict:
     """
     Calcula índice de confiança global e por número, considerando
@@ -79,8 +80,9 @@ def calcular_indice_confianca_global(
     chain_scores = resultado_chain.scores or {}
     temporal_scores = resultado_temporal.scores or {}
     quente_scores = resultado_quente.scores or {}
+    comport_scores = resultado_comport.scores or {}
 
-    padroes_total = 4.0  # estelar, chain, temporal, quente
+    padroes_total = 5.0  # estelar, chain, temporal, quente
 
     # Normalizar pesos do ensemble só nos candidatos_top
     raw_scores = [scores_ensemble.get(n, 0.0) for n in candidatos_top]
@@ -109,6 +111,8 @@ def calcular_indice_confianca_global(
             cnt += 1
         if n in quente_scores:
             cnt += 1
+        if n in comport_scores:
+            cnt += 1
 
         max_padroes = max(max_padroes, cnt)
         total_padroes += cnt
@@ -126,7 +130,7 @@ def calcular_indice_confianca_global(
     max_padroes_norm = max_padroes / padroes_total
 
     # índice global: mistura de média ponderada + melhor caso
-    indice = 0.6 * cobertura_ponderada + 0.4 * max_padroes_norm
+    indice = 0.7 * cobertura_ponderada + 0.5 * max_padroes_norm
 
     # nível qualitativo
     if indice >= 0.7:
@@ -701,6 +705,7 @@ def calcular_consenso(
     resultado_chain,
     resultado_temporal,
     resultado_quente,
+    resultado_comport
 ) -> Dict:
     """
     Calcula consenso entre Estelar, Chain, Temporal e Quente
@@ -726,6 +731,7 @@ def calcular_consenso(
         "chain": set(resultado_chain.scores.keys()) if resultado_chain and resultado_chain.scores else set(),
         "temporal": set(resultado_temporal.scores.keys()) if resultado_temporal and resultado_temporal.scores else set(),
         "quente": set(resultado_quente.scores.keys()) if resultado_quente and resultado_quente.scores else set(),
+        "comportamental": set(resultado_comport.scores.keys()) if resultado_comport and resultado_comport.scores else set(),
     }
 
     # Interessa só a interseção com o conjunto final
@@ -742,12 +748,15 @@ def calcular_consenso(
                 presencas[n] = set()
             presencas[n].add(nome)
 
+    consenso_5 = []
     consenso_4 = []
     consenso_3 = []
     consenso_2 = []
 
     for n, pats in presencas.items():
         k = len(pats)
+        if k == 5:
+            consenso_5.append(n)
         if k == 4:
             consenso_4.append(n)
         elif k == 3:
@@ -765,6 +774,7 @@ def calcular_consenso(
     }
 
     return {
+        "consenso_5": sorted(consenso_5),
         "consenso_4": sorted(consenso_4),
         "consenso_3": sorted(consenso_3),
         "consenso_2": sorted(consenso_2),
@@ -780,8 +790,9 @@ async def sugestao_ensemble(
     incluir_protecoes: bool = Query(default=True, description="Incluir proteções (espelhos, vizinhos)"),
     max_protecoes: int = Query(default=6, ge=0, le=10, description="Máximo de proteções adicionais"),
     w_estelar: float = Query(default=0.20, ge=0, le=1, description="Peso do ESTELAR"),
-    w_chain: float = Query(default=0.50, ge=0, le=1, description="Peso do CHAIN"),
-    w_quente: float = Query(default=0.30, ge=0, le=1, description="Peso do PUXADAS"),
+    w_chain: float = Query(default=0.20, ge=0, le=1, description="Peso do CHAIN"),
+    w_quente: float = Query(default=0.20, ge=0, le=1, description="Peso do PUXADAS"),
+    w_comport: float = Query(default=0.20, ge=0, le=1, description="Peso do PUXADAS"),
     w_temporal: float = Query(default=0.20, ge=0, le=1, description="Peso do TEMPORAL"),  # NOVO
     incluir_zero: bool = Query(default=True, description="Sempre incluir zero nas proteções"),
     limite_historico: int = Query(default=200, ge=100, le=5000, description="Quantidade de histórico"),
@@ -823,7 +834,7 @@ async def sugestao_ensemble(
                 
         # Busca histórico
         logger.info(f"Buscando histórico para {roulette_id} (limite: {limite_historico})")
-        numeros = await _get_historico_interno(request, roulette_id)
+        numeros = await _get_historico_interno(request, roulette_id, limite_historico)
         
         if not numeros or len(numeros) < 50:
             raise HTTPException(
@@ -833,18 +844,11 @@ async def sugestao_ensemble(
         
         logger.info(f"Histórico obtido: {len(numeros)} números")
         
-        # Configurações dos padrões
-        config_master = {
-            'enable_combined': True,     # Habilita D1Par, D2Ímpar, etc
-            'enable_blocks': True,       # Habilita bloqueios (ciclo exausto)
-            'cycle_detection': True,     # Detecta ciclos completos
-            'verbose': False             # Modo silencioso
-        }
         
         config = {
         'max_gap_between_elements': 2,
         'memory_short': 10,
-        'memory_long': 200,
+        'memory_long': limite_historico,
         'enable_inversions': True,
         'enable_compensation': True,
         'verbose': False,
@@ -903,8 +907,8 @@ async def sugestao_ensemble(
             w_estelar=w_estelar,
             w_chain=w_chain,
             w_temporal=w_temporal,
-            w_quente=0.2,
-            w_comport=0.4   
+            w_quente=w_quente,
+            w_comport=w_comport   
         )
 
         # -----------------------------
@@ -926,6 +930,7 @@ async def sugestao_ensemble(
             resultado_chain,
             resultado_temporal,
             resultado_quente,
+            resultado_comport
         )
 
         # -----------------------------
@@ -933,7 +938,7 @@ async def sugestao_ensemble(
         # -----------------------------
         numeros_agrupados = gerar_numeros_agrupados_por_regiao(
             scores_ensemble=scores_ensemble,
-            dist_cluster=1,
+            dist_cluster=2,
             min_score=0.0
         )
 
@@ -955,6 +960,7 @@ async def sugestao_ensemble(
             resultado_chain=resultado_chain,
             resultado_temporal=resultado_temporal,
             resultado_quente=resultado_quente,
+            resultado_comport=resultado_comport,
         )
 
 
