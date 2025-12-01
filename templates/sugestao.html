@@ -168,7 +168,7 @@
                             </label>
                             <input type="number" id="config-w-chain" name="w_chain" min="0" max="1" step="0.05"
                                    class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
-                                   value="0.25">
+                                   value="0.20">
                             <p class="text-xs text-gray-500 mt-1">Cadeias comportamentais</p>
                         </div>
 
@@ -180,8 +180,20 @@
                             </label>
                             <input type="number" id="config-w-temporal" name="w_temporal" min="0" max="1" step="0.05"
                                    class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
-                                   value="0.25">
+                                   value="0.20">
                             <p class="text-xs text-gray-500 mt-1">Análise por horário</p>
+                        </div>
+
+                        <!-- Peso TEMPORAL -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                🔃 Peso COMPORTAMENTAL
+                                <span class="text-gray-500 text-xs">(0.0 - 1.0)</span>
+                            </label>
+                            <input type="number" id="config-w-temporal" name="w_comport" min="0" max="1" step="0.05"
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
+                                   value="0.20">
+                            <p class="text-xs text-gray-500 mt-1">Análise por comportamento</p>
                         </div>
 
                         <!-- Peso QUENTE -->
@@ -192,7 +204,7 @@
                             </label>
                             <input type="number" id="config-w-quente" name="w_quente" min="0" max="1" step="0.05"
                                    class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
-                                   value="0.25">
+                                   value="0.20">
                             <p class="text-xs text-gray-500 mt-1">Números mais ativos</p>
                         </div>
                     </div>
@@ -786,10 +798,11 @@
                 max_protecoes: 6,
                 incluir_protecoes: true,
                 incluir_zero: true,
-                w_estelar: 0.25,
-                w_chain: 0.25,
-                w_temporal: 0.25,
-                w_quente: 0.25,
+                w_estelar: 0.20,
+                w_chain: 0.20,
+                w_temporal: 0.20,
+                w_quente: 0.20,
+                w_comport: 0.20,
                 minute_offset: 3,
                 interval_minutes: 5,
                 days_back: 30
@@ -811,6 +824,7 @@
                 w_chain: parseFloat(document.getElementById('config-w-chain').value),
                 w_temporal: parseFloat(document.getElementById('config-w-temporal').value),
                 w_quente: parseFloat(document.getElementById('config-w-quente').value),
+                w_comport: parseFloat(document.getElementById('config-w-comport').value),
                 minute_offset: parseInt(document.getElementById('config-minute-offset').value),
                 interval_minutes: parseInt(document.getElementById('config-interval-minutes').value),
                 days_back: parseInt(document.getElementById('config-days-back').value)
@@ -823,10 +837,11 @@
             document.getElementById('config-max-protecoes').value = config.max_protecoes;
             document.getElementById('config-incluir-protecoes').checked = config.incluir_protecoes;
             document.getElementById('config-incluir-zero').checked = config.incluir_zero;
-            document.getElementById('config-w-estelar').value = config.w_estelar;
-            document.getElementById('config-w-chain').value = config.w_chain;
-            document.getElementById('config-w-temporal').value = config.w_temporal;
-            document.getElementById('config-w-quente').value = config.w_quente ?? 0.25;
+            document.getElementById('config-w-estelar').value = config.w_estelar ?? 0.20;
+            document.getElementById('config-w-chain').value = config.w_chain ?? 0.20;
+            document.getElementById('config-w-temporal').value = config.w_temporal ?? 0.20;
+            document.getElementById('config-w-quente').value = config.w_quente ?? 0.20;
+            document.getElementById('config-w-comport').value = config.w_comport ?? 0.20;
             document.getElementById('config-minute-offset').value = config.minute_offset ?? 3;
             document.getElementById('config-interval-minutes').value = config.interval_minutes;
             document.getElementById('config-days-back').value = config.days_back;
@@ -1352,7 +1367,8 @@
                 w_estelar: config.w_estelar,
                 w_chain: config.w_chain,
                 w_temporal: config.w_temporal,
-                w_quente: config.w_quente
+                w_quente: config.w_quente,
+                w_comport: config.w_comport,
             });
 
             if (!Number.isNaN(config.minute_offset)) {
@@ -1466,7 +1482,8 @@
                 w_estelar: config.w_estelar,
                 w_chain: config.w_chain,
                 w_temporal: config.w_temporal,
-                w_quente: config.w_quente
+                w_quente: config.w_quente,
+                w_comport: config.w_comport,
             });
 
             if (!Number.isNaN(config.minute_offset)) {

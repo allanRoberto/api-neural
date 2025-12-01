@@ -130,7 +130,7 @@ def calcular_indice_confianca_global(
     max_padroes_norm = max_padroes / padroes_total
 
     # índice global: mistura de média ponderada + melhor caso
-    indice = 0.7 * cobertura_ponderada + 0.5 * max_padroes_norm
+    indice = 0.6 * cobertura_ponderada + 0.4 * max_padroes_norm
 
     # nível qualitativo
     if indice >= 0.7:
