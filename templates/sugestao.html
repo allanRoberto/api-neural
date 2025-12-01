@@ -620,6 +620,11 @@
                             <span>⚡</span>
                             <span>Gerar nova análise</span>
                         </button>
+                        <!-- Mensagem de status ao salvar favoritos -->
+                        <div
+                            id="fav-save-status"
+                            class="mt-2 text-[11px] min-h-[1.25rem] text-gray-400"
+                        ></div>
                     </div>
                     <!-- Teste de aposta via WebSocket -->
                     <!-- Executar aposta via extensão (usa WebSocket já aberto da mesa) -->
@@ -739,7 +744,6 @@
         const HISTORICO_KEY = 'analizer_historico';
 
         const API_BASE = 'https://auth.revesbot.com.br';
-
         const CURRENT_ROULETTE_SLUG = "{{ dados.roulette_id }}";
         const ROULETTE_SLUG_TO_GAME_ID = {
             "pragmatic-korean-roulette": "457",
@@ -757,7 +761,12 @@
 
         const SUGESTAO_JSON_URL = '/api/sugestao/' + CURRENT_ROULETTE_SLUG;
 
+        // URL de salvar favoritos (JSESSIONID fixo por enquanto; depois ajustamos para dinâmico)
+        const PRAGMATIC_SAVE_FAV_URL =
+            'https://games.pragmaticplaylive.net/api/ui/savePlayerConfigGeneric?JSESSIONID=VlzZwclAPymy8vrrFkhxYkrVbY6EwcT47Sz1gpzanS_csb-4BrgI!771017254-462b2fde&ck=1764589999483';
+
         let liveIsLogged = false;
+        let currentAnalise = null;
 
         // ==========================================
         // CONFIGURAÇÕES - LOCALSTORAGE
@@ -1232,6 +1241,94 @@
         }
 
         // ==========================================
+        // FAVORITOS - STATUS E PAYLOAD
+        // ==========================================
+
+        function setFavSaveStatus(message, type = 'info') {
+            const statusEl = document.getElementById('fav-save-status');
+            if (!statusEl) return;
+
+            let color = 'text-gray-400';
+            if (type === 'error')   color = 'text-red-400';
+            if (type === 'success') color = 'text-emerald-400';
+            if (type === 'warn')    color = 'text-amber-300';
+
+            statusEl.className = `mt-2 text-[11px] min-h-[1.25rem] ${color}`;
+            statusEl.textContent = message;
+        }
+
+        // 0 → 2, demais números +3, conforme padrão observado
+        function mapNumeroToPragmaticFavCode(num) {
+            if (num === 0) return 2;
+            return num + 3;
+        }
+
+        function buildFavPayloadFromAnalise(analise) {
+            if (!analise || !analise.sugestoes) return null;
+
+            const principaisRaw = analise.sugestoes.principais || [];
+            const numeros = principaisRaw
+                .map(s => (typeof s === 'number' ? s : s.numero))
+                .filter(n => typeof n === 'number' && !Number.isNaN(n));
+
+            if (!numeros.length) return null;
+
+            const stake = 0.5; // 50 centavos
+            const partes = numeros.map(n => `${mapNumeroToPragmaticFavCode(n)}-${stake}`);
+
+            const betNameBase = 'RevesBot Bet';
+            const favId = 'fav-' + Date.now();
+            const favNameEncoded = encodeURIComponent(betNameBase + ' 1');
+
+            const favString = `${favNameEncoded}/${partes.join(',')}/false/${favId}`;
+
+            return {
+                fav1: favString,
+                fav2: "null",
+                fav3: "null",
+                fav4: "null",
+                fav5: "null",
+                fav6: "null",
+                fav7: "null",
+                fav8: "null",
+                fav9: "null",
+                fav10: "null",
+                gameType: "classic-roulette"
+            };
+        }
+
+        async function salvarApostaComoFavorito(analise) {
+            const payload = buildFavPayloadFromAnalise(analise);
+            if (!payload) {
+                setFavSaveStatus('Nenhuma sugestão para salvar nos favoritos.', 'warn');
+                return;
+            }
+
+            setFavSaveStatus('Salvando aposta nos favoritos...', 'info');
+
+            try {
+                const res = await fetch(PRAGMATIC_SAVE_FAV_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) {
+                    console.error('[Favoritos] Erro HTTP ao salvar aposta:', res.status);
+                    setFavSaveStatus('Não foi possível salvar a aposta nos favoritos.', 'error');
+                    return;
+                }
+
+                setFavSaveStatus('Aposta salva nos favoritos da mesa.', 'success');
+            } catch (err) {
+                console.error('[Favoritos] Erro ao salvar aposta nos favoritos', err);
+                setFavSaveStatus('Erro ao salvar a aposta nos favoritos.', 'error');
+            }
+        }
+
+        // ==========================================
         // GERAR NOVA ANÁLISE VIA API (SEM RELOAD)
         // ==========================================
 
@@ -1292,6 +1389,9 @@
                 currentAnalise = data;
                 salvarNoHistorico(currentAnalise);
                 renderLiveSugestao(currentAnalise);
+
+                // Após carregar nova análise, tenta salvar aposta nos favoritos
+                salvarApostaComoFavorito(currentAnalise);
             } catch (err) {
                 console.error('[Ao vivo] Erro em gerarNovaAnalise', err);
                 alert('Erro ao gerar nova análise.');
@@ -1390,7 +1490,7 @@
             atualizarSomaPesos();
             
             const dadosAtuais = {{ dados | tojson | safe }};
-            let currentAnalise = dadosAtuais;
+            currentAnalise = dadosAtuais;
 
             salvarNoHistorico(currentAnalise);
             renderLiveSugestao(currentAnalise);
