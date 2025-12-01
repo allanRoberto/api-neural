@@ -626,12 +626,6 @@
                                 via extensão
                             </span>
                         </div>
-
-                        <p class="text-xs text-gray-400">
-                            Usa os números da sugestão atual e envia um comando de aposta para a extensão,
-                            que aproveita o WebSocket já aberto na mesa (nenhum segundo WebSocket é criado).
-                        </p>
-
                         <button
                             id="btn-executar-aposta"
                             type="button"
@@ -1148,7 +1142,7 @@
                 if (placeholder) {
                     placeholder.classList.add('hidden');
                 }
-                liveSetStatus('Jogo iniciado. Iframe carregando...', 'success');
+                liveSetStatus('Jogo iniciado.', 'success');
             } catch (err) {
                 console.error('[Ao vivo] Erro em startLiveGame', err);
                 liveSetStatus('Erro ao iniciar jogo.', 'danger');
