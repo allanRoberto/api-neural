@@ -363,29 +363,77 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     
                     <!-- Total -->
-                    {% if dados.analise.consenso.consenso_total|length > 0 %}
+                    {% if dados.analise.consenso.consenso_5|length > 0 %}
                     <div class="consenso-total rounded-xl p-4 shadow-lg">
                         <div class="flex items-center gap-2 mb-2">
                             <span class="text-2xl">🌟</span>
                             <h3 class="text-white font-bold">Total (todos os padrões)</h3>
                         </div>
                         <div class="flex flex-wrap gap-2 mt-3">
-                            {% for num in dados.analise.consenso.consenso_total %}
+                            {% for num in dados.analise.consenso.consenso_5 %}
                             <span class="bg-white/20 text-white px-3 py-1 rounded-full font-bold">{{ num }}</span>
                             {% endfor %}
                         </div>
                     </div>
                     {% endif %}
                 
-                    <!-- Duplo -->
-                    {% if dados.analise.consenso.consenso_duplo %}
+
+                    {% if dados.analise.consenso.consenso_4 %}
+                    <div class="consenso-duplo rounded-xl p-4 shadow-lg">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">🔹</span>
+                            <h3 class="text-white font-bold">Quadruplo (4 padrões)</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            {% for tipo, numeros in dados.analise.consenso.consenso_4.items() %}
+                                {% for num in numeros %}
+                                <span class="bg-white/20 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if dados.analise.consenso.consenso_3 %}
+                    <div class="consenso-duplo rounded-xl p-4 shadow-lg">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">🔹</span>
+                            <h3 class="text-white font-bold">Triplo (3 padrões)</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            {% for tipo, numeros in dados.analise.consenso.consenso_3.items() %}
+                                {% for num in numeros %}
+                                <span class="bg-white/20 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if dados.analise.consenso.consenso_2 %}
                     <div class="consenso-duplo rounded-xl p-4 shadow-lg">
                         <div class="flex items-center gap-2 mb-2">
                             <span class="text-2xl">🔹</span>
                             <h3 class="text-white font-bold">Duplo (2 padrões)</h3>
                         </div>
                         <div class="flex flex-wrap gap-2 mt-3">
-                            {% for tipo, numeros in dados.analise.consenso.consenso_duplo.items() %}
+                            {% for tipo, numeros in dados.analise.consenso.consenso_2.items() %}
+                                {% for num in numeros %}
+                                <span class="bg-white/20 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    <!-- Duplo -->
+                    {% if dados.analise.consenso.unicos %}
+                    <div class="consenso-duplo rounded-xl p-4 shadow-lg">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">🔹</span>
+                            <h3 class="text-white font-bold">Únicos</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            {% for tipo, numeros in dados.analise.consenso.unicos.items() %}
                                 {% for num in numeros %}
                                 <span class="bg-white/20 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
                                 {% endfor %}
