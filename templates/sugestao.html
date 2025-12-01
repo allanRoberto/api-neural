@@ -14,635 +14,739 @@
             transition: all 0.3s ease;
         }
         .numero-chip:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.25);
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+        .consenso-total { 
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+        }
+        .consenso-duplo { 
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        }
+        .faltante-badge {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .loading {
+            border: 4px solid #1e293b;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .tab-active {
+            border-bottom: 2px solid #3b82f6;
+            color: #3b82f6;
         }
     </style>
 </head>
-<body class="text-gray-100 antialiased">
-    <div class="min-h-screen flex items-center justify-center px-2 sm:px-4">
-        <div class="w-full max-w-6xl bg-slate-900/80 backdrop-blur-lg border border-slate-700/70 rounded-2xl shadow-2xl shadow-black/40 overflow-hidden">
-            <!-- Header / Título -->
-            <div class="border-b border-slate-700/70 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-4 sm:px-6 py-4">
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div>
-                        <h1 class="text-xl sm:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-sky-300 to-cyan-300">
-                            Analisador ESTELAR + CHAIN + TEMPORAL + QUENTE
-                        </h1>
-                        <p class="text-xs sm:text-sm text-slate-300 mt-1">
-                            Monte rapidamente suas jogadas combinando múltiplos padrões inteligentes.
+<body class="p-4">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-white mb-2">
+                🎯 Analizer Estelar + Chain + Temporal + Quente
+            </h1>
+            <p class="text-gray-400">Sistema Ensemble de Sugestões para Roleta</p>
+            <p class="text-gray-500 text-sm mt-2">{{ dados.roulette_id }}</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="bg-gray-800/50 backdrop-blur-sm rounded-t-xl border-x border-t border-gray-700">
+            <div class="flex gap-4 px-6 pt-4">
+                <button onclick="showTab('sugestao')" id="tab-sugestao" class="tab-active pb-2 px-2 font-semibold transition-all">
+                    📊 Sugestão Atual
+                </button>
+                <button onclick="showTab('aovivo')" id="tab-aovivo" class="pb-2 px-2 text-gray-400 hover:text-white font-semibold transition-all">
+                    🎥 Ao vivo
+                </button>
+                <button onclick="showTab('config')" id="tab-config" class="pb-2 px-2 text-gray-400 hover:text-white font-semibold transition-all">
+                    ⚙️ Configurações
+                </button>
+                <button onclick="showTab('historico')" id="tab-historico" class="pb-2 px-2 text-gray-400 hover:text-white font-semibold transition-all">
+                    📜 Histórico (20)
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab: Configurações -->
+        <div id="content-config" class="hidden bg-gray-800/50 backdrop-blur-sm rounded-b-xl p-6 mb-6 border border-gray-700">
+            <h2 class="text-xl font-bold text-white mb-4">⚙️ Configurações da API</h2>
+            <form id="configForm" class="space-y-6">
+                
+                <!-- Seção: Parâmetros Gerais -->
+                <div>
+                    <h3 class="text-lg font-semibold text-blue-400 mb-3">📋 Parâmetros Gerais</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Quantidade -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                Quantidade de Sugestões
+                                <span class="text-gray-500 text-xs">(1-12)</span>
+                            </label>
+                            <input type="number" id="config-quantidade" name="quantidade" min="1" max="28" 
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
+                                   value="6">
+                        </div>
+
+                        <!-- Limite Histórico -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                Limite de Histórico
+                                <span class="text-gray-500 text-xs">(100-5000)</span>
+                            </label>
+                            <input type="number" id="config-limite-historico" name="limite_historico" min="100" max="5000" step="100"
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
+                                   value="2000">
+                        </div>
+
+                        <!-- Máximo de Proteções -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                Máximo de Proteções
+                                <span class="text-gray-500 text-xs">(0-10)</span>
+                            </label>
+                            <input type="number" id="config-max-protecoes" name="max_protecoes" min="0" max="10" 
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
+                                   value="6">
+                        </div>
+                    </div>
+
+                    <!-- Checkboxes -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div class="flex items-center">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="config-incluir-protecoes" name="incluir_protecoes" checked
+                                       class="w-5 h-5 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 text-blue-600">
+                                <span class="ml-3 text-gray-300">Incluir Proteções (espelhos, vizinhos)</span>
+                            </label>
+                        </div>
+
+                        <div class="flex items-center">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="config-incluir-zero" name="incluir_zero" checked
+                                       class="w-5 h-5 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 text-blue-600">
+                                <span class="ml-3 text-gray-300">Sempre incluir Zero nas proteções</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seção: Pesos do Ensemble -->
+                <div>
+                    <h3 class="text-lg font-semibold text-purple-400 mb-3">⚖️ Pesos do Ensemble</h3>
+                    <p class="text-gray-400 text-sm mb-3">
+                        💡 Ajuste o peso de cada padrão (0.0 a 1.0). Os pesos serão normalizados automaticamente.
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <!-- Peso ESTELAR -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                ⭐ Peso ESTELAR
+                                <span class="text-gray-500 text-xs">(0.0 - 1.0)</span>
+                            </label>
+                            <input type="number" id="config-w-estelar" name="w_estelar" min="0" max="1" step="0.05"
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
+                                   value="0.25">
+                            <p class="text-xs text-gray-500 mt-1">Equivalências e substituições</p>
+                        </div>
+
+                        <!-- Peso CHAIN -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                🔗 Peso CHAIN
+                                <span class="text-gray-500 text-xs">(0.0 - 1.0)</span>
+                            </label>
+                            <input type="number" id="config-w-chain" name="w_chain" min="0" max="1" step="0.05"
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
+                                   value="0.25">
+                            <p class="text-xs text-gray-500 mt-1">Cadeias comportamentais</p>
+                        </div>
+
+                        <!-- Peso TEMPORAL -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                ⏰ Peso TEMPORAL
+                                <span class="text-gray-500 text-xs">(0.0 - 1.0)</span>
+                            </label>
+                            <input type="number" id="config-w-temporal" name="w_temporal" min="0" max="1" step="0.05"
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
+                                   value="0.25">
+                            <p class="text-xs text-gray-500 mt-1">Análise por horário</p>
+                        </div>
+
+                        <!-- Peso QUENTE -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                🔥 Peso QUENTE
+                                <span class="text-gray-500 text-xs">(0.0 - 1.0)</span>
+                            </label>
+                            <input type="number" id="config-w-quente" name="w_quente" min="0" max="1" step="0.05"
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
+                                   value="0.25">
+                            <p class="text-xs text-gray-500 mt-1">Números mais ativos</p>
+                        </div>
+                    </div>
+
+                    <!-- Soma dos Pesos -->
+                    <div class="mt-4 p-3 bg-gray-700/50 rounded-lg border border-gray-600">
+                        <p class="text-gray-300 text-sm">
+                            ✅ Soma dos pesos: <span id="soma-pesos" class="font-bold text-blue-400">1.00</span>
+                            <span class="text-gray-500 text-xs ml-2">(os pesos serão normalizados automaticamente)</span>
                         </p>
                     </div>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-300 border border-emerald-500/40">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-2 animate-pulse"></span>
-                            RevesBot · v1.0
+                </div>
+
+                <!-- Seção: Configurações TEMPORAL -->
+                <div>
+                    <h3 class="text-lg font-semibold text-yellow-400 mb-3">⏰ Configurações do Padrão TEMPORAL</h3>
+                    <div class="bg-yellow-900/20 border border-yellow-700/50 rounded-lg p-4 mb-4">
+                        <p class="text-yellow-200 text-sm mb-2">
+                            <strong>📊 Análise Temporal:</strong> Este padrão analisa números que apareceram em horários similares nos dias anteriores.
+                        </p>
+                        <p class="text-yellow-300/80 text-xs">
+                            O sistema busca padrões de horário no histórico e identifica quais números tendem a aparecer em momentos específicos do dia, usando um offset em minutos em relação ao horário atual.
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Offset de minutos -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                🕒 Offset (minutos)
+                                <span class="text-gray-500 text-xs">(-60 a 60)</span>
+                            </label>
+                            <input type="number" id="config-minute-offset" name="minute_offset" min="-60" max="60"
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-yellow-500 focus:outline-none"
+                                   value="3">
+                            <p class="text-xs text-gray-500 mt-1">Minutos em relação ao horário atual (ex: -5, +3).</p>
+                        </div>
+
+                        <!-- Intervalo de Análise -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                📊 Intervalo (minutos)
+                                <span class="text-gray-500 text-xs">(1-30)</span>
+                            </label>
+                            <input type="number" id="config-interval-minutes" name="interval_minutes" min="1" max="30"
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-yellow-500 focus:outline-none"
+                                   value="5">
+                            <p class="text-xs text-gray-500 mt-1">Janela de tempo (±N minutos)</p>
+                        </div>
+
+                        <!-- Dias de Histórico -->
+                        <div>
+                            <label class="text-gray-300 text-sm block mb-2">
+                                📅 Histórico (days)
+                                <span class="text-gray-500 text-xs">(7-90)</span>
+                            </label>
+                            <input type="number" id="config-days-back" name="days_back" min="7" max="90"
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-yellow-500 focus:outline-none"
+                                   value="30">
+                            <p class="text-xs text-gray-500 mt-1">Quantos dias analisar</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botões de Ação -->
+                <div class="flex gap-4">
+                    <button type="submit" class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 px-6 rounded-lg transition-all">
+                        💾 Salvar e Atualizar
+                    </button>
+                    <button type="button" onclick="resetarConfiguracoes()" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition-all">
+                        🔄 Restaurar Padrão
+                    </button>
+                </div>
+
+            </form>
+        </div>
+
+        <!-- Tab: Sugestão Atual -->
+        <div id="content-sugestao" class="bg-gray-800/50 backdrop-blur-sm rounded-b-xl p-6 mb-6 border border-gray-700">
+            <!-- Histórico Recente -->
+            <div class="mb-6">
+                <h2 class="text-xl font-bold text-white mb-4">📊 Últimos 10 números da mesa</h2>
+                <div class="flex flex-wrap gap-2">
+                    {% for num in dados.analise.ultimos_10 %}
+                    <span class="bg-gray-600 text-white px-4 py-2 rounded-lg font-bold">{{ num }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% set conf_global = dados.analise.confianca.valor
+                if dados.analise.confianca is mapping and dados.analise.confianca.valor is defined
+                else (dados.analise.confianca
+                    if dados.analise.confianca is number
+                    else 0)
+            %}
+            
+            <div class="mb-3 flex items-center gap-3">
+              <span class="text-sm text-gray-200">Nível de confiança:</span>
+            
+              <div class="flex-1 h-2 rounded-full bg-gray-700 overflow-hidden max-w-[260px]">
+                <div
+                  class="h-full bg-emerald-400 transition-all"
+                  style="width: {{ conf_global * 100 }}%;"
+                ></div>
+              </div>
+            
+              <span class="text-sm font-semibold text-emerald-300">
+                {{ "%.0f"|format(conf_global * 100) }}%
+              </span>
+            </div>
+            <!-- Sugestões Principais -->
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-white mb-4">🎲 Números Sugeridos ({{ dados.sugestoes.principais|length }})</h2>
+
+                <div class="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+                    {% for sugestao in dados.sugestoes.principais %}
+                    <div class="numero-chip bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-4 text-center shadow-lg">
+                        <div class="text-3xl font-bold text-white">{{ sugestao.numero }}</div>
+                        <div class="text-xs text-blue-200 mt-1">{{ "%.1f"|format(sugestao.score * 100) }}%</div>
+                        {% set conf_num = (sugestao.confianca if sugestao.confianca is defined else sugestao.score) %}
+
+                        <div class="mt-2 h-1.5 w-full bg-blue-900/60 rounded-full overflow-hidden">
+                        <div
+                            class="h-full bg-emerald-300 transition-all"
+                            style="width: {{ (conf_num or 0) * 100 }}%;"
+                        ></div>
+                        </div>
+
+                        <div class="text-[11px] text-blue-100 mt-1">
+                        {{ "%.0f"|format((conf_num or 0) * 100) }}%
+                        </div>
+                    
+                    </div>
+                    
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Proteções -->
+            {% if dados.sugestoes.protecoes|length > 0 %}
+            <div class="mb-6">
+                <h2 class="text-xl font-bold text-white mb-4">🛡️ Proteções ({{ dados.sugestoes.protecoes|length }})</h2>
+                <div class="grid grid-cols-6 md:grid-cols-10 lg:grid-cols-12 gap-2">
+                    {% for protecao in dados.sugestoes.protecoes %}
+                    <div class="bg-gray-700 rounded-lg p-3 text-center">
+                        <div class="text-xl font-bold text-gray-300">{{ protecao.numero }}</div>
+                        <div class="text-xs text-gray-500 mt-1">{{ protecao.tipo }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Consenso -->
+            <div class="mb-6">
+                <h2 class="text-xl font-bold text-white mb-4">🤝 Consenso entre Padrões</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    
+                    <!-- Total -->
+                    {% if dados.analise.consenso.consenso_total|length > 0 %}
+                    <div class="consenso-total rounded-xl p-4 shadow-lg">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">🌟</span>
+                            <h3 class="text-white font-bold">Total (todos os padrões)</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            {% for num in dados.analise.consenso.consenso_total %}
+                            <span class="bg-white/20 text-white px-3 py-1 rounded-full font-bold">{{ num }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                
+                    <!-- Duplo -->
+                    {% if dados.analise.consenso.consenso_duplo %}
+                    <div class="consenso-duplo rounded-xl p-4 shadow-lg">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">🔹</span>
+                            <h3 class="text-white font-bold">Duplo (2 padrões)</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            {% for tipo, numeros in dados.analise.consenso.consenso_duplo.items() %}
+                                {% for num in numeros %}
+                                <span class="bg-white/20 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                </div>
+            </div>
+
+            <!-- Análise Individual -->
+            <div class="mb-6">
+                <h2 class="text-xl font-bold text-white mb-4">🔍 Análise Individual dos Padrões</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    
+                    <!-- ESTELAR -->
+                    <div class="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+                        <h3 class="text-lg font-bold text-purple-400 mb-3">⭐ ESTELAR</h3>
+                        <p class="text-xs text-gray-400 mb-2">Equivalentes: {{ dados.padroes.estelar.padroes_equivalentes }}</p>
+                        <div class="flex flex-wrap gap-2">
+                            {% for num in dados.padroes.estelar.top_18 %}
+                            <span class="bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
+                            {% endfor %}
+                            {% if dados.padroes.estelar.top_18|length == 0 %}
+                            <p class="text-gray-400 text-sm">Nenhum padrão detectado</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+
+                    <!-- ESTELAR -->
+                    <div class="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+                        <h3 class="text-lg font-bold text-orange-400 mb-3">🔄 Comportamental</h3>
+                        <div class="flex flex-wrap gap-2">
+                            {% for num in dados.padroes.comportamental.top_18 %}
+                            <span class="bg-orange-700 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
+                            {% endfor %}
+                            {% if dados.padroes.comportamental.top_18|length == 0 %}
+                            <p class="text-gray-400 text-sm">Nenhum padrão detectado</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- CHAIN -->
+                    <div class="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+                        <h3 class="text-lg font-bold text-green-400 mb-3">🔗 CHAIN</h3>
+                        <p class="text-xs text-gray-400 mb-2">
+                            Cadeias: {{ dados.padroes.chain.cadeias_aprendidas }} | 
+                            Inversões: {{ dados.padroes.chain.inversoes }}
+                        </p>
+                        <div class="flex flex-wrap gap-2">
+                            {% for num in dados.padroes.chain.top_18 %}
+                            <span class="bg-green-600 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
+                            {% endfor %}
+                            {% if dados.padroes.chain.top_18|length == 0 %}
+                            <p class="text-gray-400 text-sm">Nenhum padrão detectado</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- TEMPORAL -->
+                    <div class="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+                        <h3 class="text-lg font-bold text-yellow-400 mb-3">⏰ TEMPORAL</h3>
+                        <p class="text-xs text-gray-400 mb-2">
+                            Horário: {{ dados.padroes.temporal.time_analyzed or 'N/A' }} 
+                            {% if dados.padroes.temporal.interval_minutes %}
+                            (±{{ dados.padroes.temporal.interval_minutes }}min)
+                            {% endif %}
+                            <br>
+                            Candidatos: {{ dados.padroes.temporal.candidates or 0 }} | 
+                            Ocorrências: {{ dados.padroes.temporal.total_occurrences or 0 }}
+                        </p>
+                        <div class="flex flex-wrap gap-2">
+                            {% for item in dados.padroes.temporal.top_18 %}
+                            <span class="bg-yellow-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                                {% if item.numero is defined %}
+                                    {{ item.numero }}
+                                {% elif item.number is defined %}
+                                    {{ item.number }}
+                                {% else %}
+                                    {{ item }}
+                                {% endif %}
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- QUENTE -->
+                    {% if dados.padroes.quente is defined %}
+                    <div class="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+                        <h3 class="text-lg font-bold text-red-400 mb-3">🔥 QUENTE</h3>
+                        <p class="text-xs text-gray-400 mb-2">
+                            Janela: {{ dados.padroes.quente.janela or '?' }} |
+                            Limite: {{ dados.padroes.quente.limite_quente or '?' }}
+                        </p>
+                        <div class="flex flex-wrap gap-2">
+                            {% for num in dados.padroes.quente.top_18 %}
+                            <span class="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
+                            {% endfor %}
+                            {% if dados.padroes.quente.top_18|length == 0 %}
+                            <p class="text-gray-400 text-sm">Nenhum número quente detectado</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                </div>
+            </div>
+
+            <!-- Números Faltantes -->
+            {% if dados.analise.faltantes|length > 0 %}
+            <div class="mb-6">
+                <h2 class="text-xl font-bold text-white mb-4">
+                    ⏳ Números Faltantes 
+                    <span class="text-sm text-gray-400 font-normal">(não apareceram nas últimas 30 jogadas)</span>
+                </h2>
+                <div class="grid grid-cols-6 md:grid-cols-10 lg:grid-cols-12 gap-2">
+                    {% for num in dados.analise.faltantes %}
+                    <div class="bg-orange-600/80 rounded-lg p-3 text-center faltante-badge">
+                        <div class="text-xl font-bold text-white">{{ num }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Metadata -->
+            <div class="bg-gray-700/30 rounded-xl p-4 border border-gray-600">
+                <h3 class="text-lg font-bold text-gray-300 mb-3">📋 Informações da Análise</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                    <div>
+                        <span class="text-gray-400">Último número:</span>
+                        <span class="text-white font-bold ml-2">{{ dados.analise.ultimo_numero }}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400">Histórico analisado:</span>
+                        <span class="text-white font-bold ml-2">{{ dados.configuracao.historico_analisado }} jogadas</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400">Total sugerido:</span>
+                        <span class="text-white font-bold ml-2">{{ dados.sugestoes.total_numeros }} números</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400">Pesos:</span>
+                        <span class="text-white font-bold ml-2">
+                            E:{{ "%.2f"|format(dados.configuracao.pesos.estelar) }} 
+                            C:{{ "%.2f"|format(dados.configuracao.pesos.chain) }}
+                            T:{{ "%.2f"|format(dados.configuracao.pesos.temporal) }}
+                            Q:{{ "%.2f"|format(dados.configuracao.pesos.quente|default(0)) }}
                         </span>
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-sky-500/10 text-sky-300 border border-sky-500/40">
-                            Pragmatic · Lightning / Classic
-                        </span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400">Proteções:</span>
+                        <span class="text-white font-bold ml-2">{{ dados.sugestoes.protecoes|length }}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400">Timestamp:</span>
+                        <span class="text-white font-bold ml-2 text-xs">{{ dados.analise.confianca }}</span>
                     </div>
                 </div>
             </div>
 
-            <div class="px-3 sm:px-4 py-4 sm:py-6">
-                <!-- Tabs -->
-                <div class="border-b border-slate-700 mb-4">
-                    <nav class="-mb-px flex flex-wrap gap-1" aria-label="Tabs">
-                        <button
-                            id="tab-sugestao"
-                            class="tab-btn border-b-2 border-transparent px-3 py-2 text-xs sm:text-sm font-medium text-slate-300 hover:text-blue-300 hover:border-blue-400/60 flex items-center gap-2"
-                            data-tab="sugestao"
-                        >
-                            <span>🎯</span>
-                            <span>Sugestão</span>
-                        </button>
-                        <button
-                            id="tab-config"
-                            class="tab-btn border-b-2 border-transparent px-3 py-2 text-xs sm:text-sm font-medium text-slate-300 hover:text-blue-300 hover:border-blue-400/60 flex items-center gap-2"
-                            data-tab="config"
-                        >
-                            <span>⚙️</span>
-                            <span>Configurações</span>
-                        </button>
-                        <button
-                            id="tab-historico"
-                            class="tab-btn border-b-2 border-transparent px-3 py-2 text-xs sm:text-sm font-medium text-slate-300 hover:text-blue-300 hover:border-blue-400/60 flex items-center gap-2"
-                            data-tab="historico"
-                        >
-                            <span>📜</span>
-                            <span>Histórico</span>
-                        </button>
-                        <button
-                            id="tab-aovivo"
-                            class="tab-btn border-b-2 border-transparent px-3 py-2 text-xs sm:text-sm font-medium text-slate-300 hover:text-blue-300 hover:border-blue-400/60 flex items-center gap-2"
-                            data-tab="aovivo"
-                        >
-                            <span>🎥</span>
-                            <span>Ao vivo</span>
-                        </button>
-                    </nav>
-                </div>
+        </div>
 
-                <!-- Conteúdo principal -->
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                    <!-- Coluna esquerda: Sugestão + Configuração -->
-                    <div class="lg:col-span-2 space-y-4">
-                        <!-- TAB: SUGESTÃO -->
-                        <div id="content-sugestao" class="tab-content space-y-4">
-                            <!-- Seção de input: números anteriores -->
-                            <div class="bg-slate-900/70 border border-slate-700/60 rounded-xl p-4">
-                                <h2 class="text-sm sm:text-base font-semibold text-slate-100 mb-2 flex items-center gap-2">
-                                    <span>🧮</span>
-                                    <span>Números anteriores</span>
-                                </h2>
-                                <p class="text-xs text-slate-400 mb-3">
-                                    Cole aqui os números que já saíram (últimos resultados da roleta), separados por espaço ou vírgula.
-                                </p>
-                                <textarea
-                                    id="input-numeros"
-                                    class="w-full h-24 sm:h-28 p-2 rounded-lg bg-slate-950/80 border border-slate-700 text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/60"
-                                    placeholder="Exemplo: 12 34 0 21 9 18 7 25..."
-                                ></textarea>
-                                <p id="input-numeros-feedback" class="text-[11px] text-slate-400 mt-1">
-                                    Nenhuma análise realizada ainda.
-                                </p>
-                            </div>
-
-                            <!-- Seção: Sugestão final -->
-                            <div class="bg-slate-900/70 border border-slate-700/60 rounded-xl p-4 space-y-4">
-                                <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-                                    <div>
-                                        <h2 class="text-sm sm:text-base font-semibold text-slate-100 flex items-center gap-2">
-                                            <span>🎯</span>
-                                            <span>Sugestão final</span>
-                                        </h2>
-                                        <p class="text-[11px] text-slate-400">
-                                            Números sugeridos considerando ESTELAR, CHAIN, TEMPORAL e QUENTE.
-                                        </p>
-                                    </div>
-                                    <button
-                                        id="btn-analisar"
-                                        class="inline-flex items-center px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-xs sm:text-sm font-semibold text-white shadow-sm shadow-blue-500/30 transition-all"
-                                    >
-                                        <span>🚀</span>
-                                        <span class="ml-1">Analisar</span>
-                                    </button>
-                                </div>
-
-                                <div id="sugestao-principais" class="flex flex-wrap gap-2"></div>
-
-                                <div class="border-t border-slate-700/60 pt-3 mt-2">
-                                    <div class="flex items-center justify-between mb-2">
-                                        <span class="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
-                                            <span>🛡️</span>
-                                            Proteções
-                                        </span>
-                                        <span class="text-[11px] text-slate-400" id="protecoes-count-indicator"></span>
-                                    </div>
-                                    <div id="sugestao-protecoes" class="flex flex-wrap gap-2"></div>
-                                </div>
-                            </div>
+        <!-- Tab: Ao vivo -->
+        <div id="content-aovivo" class="hidden bg-gray-800/50 backdrop-blur-sm rounded-b-xl p-6 mb-6 border border-gray-700">
+            <div class="flex flex-col lg:flex-row gap-6">
+                <!-- Coluna esquerda: login e controles -->
+                <div class="w-full lg:w-1/3 space-y-4">
+                    <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <h2 class="text-lg font-bold text-white">🎥 Ao vivo</h2>
+                            <span id="live-status" class="text-xs text-gray-400">Aguardando...</span>
                         </div>
 
-                        <!-- TAB: CONFIG -->
-                        <div id="content-config" class="tab-content hidden space-y-4">
-                            <!-- Configuração principal -->
-                            <div class="bg-slate-900/70 border border-slate-700/60 rounded-xl p-4 space-y-3">
-                                <h2 class="text-sm sm:text-base font-semibold text-slate-100 mb-1 flex items-center gap-2">
-                                    <span>⚙️</span>
-                                    <span>Configuração da Análise</span>
-                                </h2>
-                                <p class="text-[11px] text-slate-400 mb-3">
-                                    Ajuste os pesos e parâmetros usados na análise ESTELAR, CHAIN, TEMPORAL e QUENTE.
-                                </p>
-
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <!-- Quantidade de números -->
-                                    <div>
-                                        <label class="block text-xs font-medium text-slate-300 mb-1">
-                                            Quantidade de números sugeridos (final)
-                                        </label>
-                                        <input
-                                            id="config-quantidade"
-                                            type="number"
-                                            min="1"
-                                            max="37"
-                                            class="w-full px-2 py-1.5 rounded-md bg-slate-950/80 border border-slate-700 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500/70"
-                                            value="6"
-                                        />
-                                        <p class="text-[11px] text-slate-500 mt-1">
-                                            Números finais sugeridos para aposta principal (sem contar proteções).
-                                        </p>
-                                    </div>
-
-                                    <!-- Limite de histórico -->
-                                    <div>
-                                        <label class="block text-xs font-medium text-slate-300 mb-1">
-                                            Limite de histórico analisado
-                                        </label>
-                                        <input
-                                            id="config-limite-historico"
-                                            type="number"
-                                            min="20"
-                                            max="300"
-                                            class="w-full px-2 py-1.5 rounded-md bg-slate-950/80 border border-slate-700 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500/70"
-                                            value="80"
-                                        />
-                                        <p class="text-[11px] text-slate-500 mt-1">
-                                            Quantidade máxima de últimos resultados usados em ESTELAR, CHAIN e QUENTE.
-                                        </p>
-                                    </div>
-
-                                    <!-- Incluir proteções -->
-                                    <div>
-                                        <label class="inline-flex items-center gap-2 text-xs font-medium text-slate-300 mb-1">
-                                            <input
-                                                id="config-incluir-protecoes"
-                                                type="checkbox"
-                                                class="rounded border-slate-600 bg-slate-900 text-blue-500 focus:ring-blue-500/70"
-                                                checked
-                                            />
-                                            Incluir proteções
-                                        </label>
-                                        <input
-                                            id="config-max-protecoes"
-                                            type="number"
-                                            min="0"
-                                            max="18"
-                                            class="mt-1 w-full px-2 py-1.5 rounded-md bg-slate-950/80 border border-slate-700 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500/70"
-                                            value="6"
-                                        />
-                                        <p class="text-[11px] text-slate-500 mt-1">
-                                            Proteções são números extras para cobrir regiões de risco.
-                                        </p>
-                                    </div>
-
-                                    <!-- Incluir zero -->
-                                    <div>
-                                        <label class="inline-flex items-center gap-2 text-xs font-medium text-slate-300 mb-1">
-                                            <input
-                                                id="config-incluir-zero"
-                                                type="checkbox"
-                                                class="rounded border-slate-600 bg-slate-900 text-blue-500 focus:ring-blue-500/70"
-                                                checked
-                                            />
-                                            Incluir 0 quando fizer sentido
-                                        </label>
-                                        <p class="text-[11px] text-slate-500 mt-1">
-                                            Se marcado, o 0 pode ser incluído na proteção ou na sugestão final, dependendo dos padrões.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Configuração de pesos dos padrões -->
-                            <div class="bg-slate-900/70 border border-slate-700/60 rounded-xl p-4 space-y-4">
-                                <h2 class="text-sm sm:text-base font-semibold text-slate-100 mb-1 flex items-center gap-2">
-                                    <span>📊</span>
-                                    <span>Pesos dos padrões</span>
-                                </h2>
-                                <p class="text-[11px] text-slate-400 mb-3">
-                                    Ajuste a importância relativa de cada padrão na pontuação final de cada número.
-                                </p>
-
-                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                                    <!-- Peso ESTELAR -->
-                                    <div>
-                                        <label class="block text-xs font-medium text-slate-300 mb-1">
-                                            Peso ESTELAR (espelhos / terminais)
-                                        </label>
-                                        <input
-                                            id="config-w-estelar"
-                                            type="number"
-                                            step="0.1"
-                                            class="w-full px-2 py-1.5 rounded-md bg-slate-950/80 border border-slate-700 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500/70"
-                                            value="0.5"
-                                        />
-                                        <p class="text-[11px] text-slate-500 mt-1">
-                                            Mais alto ⇒ maior foco em espelhos, terminais e padrões estelares.
-                                        </p>
-                                    </div>
-
-                                    <!-- Peso CHAIN -->
-                                    <div>
-                                        <label class="block text-xs font-medium text-slate-300 mb-1">
-                                            Peso CHAIN (sequências / puxadas)
-                                        </label>
-                                        <input
-                                            id="config-w-chain"
-                                            type="number"
-                                            step="0.1"
-                                            class="w-full px-2 py-1.5 rounded-md bg-slate-950/80 border border-slate-700 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500/70"
-                                            value="0.7"
-                                        />
-                                        <p class="text-[11px] text-slate-500 mt-1">
-                                            Mais alto ⇒ maior foco em relações entre número anterior e próximo.
-                                        </p>
-                                    </div>
-
-                                    <!-- Peso TEMPORAL -->
-                                    <div>
-                                        <label class="block text-xs font-medium text-slate-300 mb-1">
-                                            Peso TEMPORAL (horário / recorrência)
-                                        </label>
-                                        <input
-                                            id="config-w-temporal"
-                                            type="number"
-                                            step="0.1"
-                                            class="w-full px-2 py-1.5 rounded-md bg-slate-950/80 border border-slate-700 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500/70"
-                                            value="0.4"
-                                        />
-                                        <p class="text-[11px] text-slate-500 mt-1">
-                                            Usa dados históricos por horário para reforçar números recorrentes.
-                                        </p>
-                                    </div>
-
-                                    <!-- Peso QUENTE -->
-                                    <div>
-                                        <label class="block text-xs font-medium text-slate-300 mb-1">
-                                            Peso QUENTE (frequência recente)
-                                        </label>
-                                        <input
-                                            id="config-w-quente"
-                                            type="number"
-                                            step="0.1"
-                                            class="w-full px-2 py-1.5 rounded-md bg-slate-950/80 border border-slate-700 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500/70"
-                                            value="0.3"
-                                        />
-                                        <p class="text-[11px] text-slate-500 mt-1">
-                                            Fortalece números que mais apareceram no histórico recente.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Configuração TEMPORAL (detalhes) -->
-                            <div class="bg-slate-900/70 border border-slate-700/60 rounded-xl p-4 space-y-4">
-                                <h2 class="text-sm sm:text-base font-semibold text-slate-100 mb-1 flex items-center gap-2">
-                                    <span>⏱️</span>
-                                    <span>Configuração Temporal</span>
-                                </h2>
-                                <p class="text-[11px] text-slate-400 mb-3">
-                                    Parâmetros para a análise temporal, usados para reforçar números com histórico forte em horários parecidos.
-                                </p>
-
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    <!-- Offset de minutos -->
-                                    <div>
-                                        <label class="block text-xs font-medium text-slate-300 mb-1">
-                                            Offset de minutos (em relação ao horário atual)
-                                        </label>
-                                        <input
-                                            id="config-minute-offset"
-                                            type="number"
-                                            class="w-full px-2 py-1.5 rounded-md bg-slate-950/80 border border-slate-700 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500/70"
-                                            value="0"
-                                        />
-                                        <p class="text-[11px] text-slate-500 mt-1">
-                                            Ajuste o horário de referência para a análise (ex: +5 = daqui 5 minutos).
-                                        </p>
-                                    </div>
-
-                                    <!-- Intervalo em minutos -->
-                                    <div>
-                                        <label class="block text-xs font-medium text-slate-300 mb-1">
-                                            Intervalo em minutos (janela do horário)
-                                        </label>
-                                        <input
-                                            id="config-interval-minutes"
-                                            type="number"
-                                            class="w-full px-2 py-1.5 rounded-md bg-slate-950/80 border border-slate-700 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500/70"
-                                            value="5"
-                                        />
-                                        <p class="text-[11px] text-slate-500 mt-1">
-                                            Janela em torno do horário analisado (ex: 5 = de HH:MM-5 até HH:MM+5).
-                                        </p>
-                                    </div>
-
-                                    <!-- Dias para trás -->
-                                    <div>
-                                        <label class="block text-xs font-medium text-slate-300 mb-1">
-                                            Dias para trás (histórico temporal)
-                                        </label>
-                                        <input
-                                            id="config-days-back"
-                                            type="number"
-                                            class="w-full px-2 py-1.5 rounded-md bg-slate-950/80 border border-slate-700 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500/70"
-                                            value="30"
-                                        />
-                                        <p class="text-[11px] text-slate-500 mt-1">
-                                            Quantos dias de histórico usar para descobrir padrões por horário.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- TAB: HISTÓRICO -->
-                        <div id="content-historico" class="tab-content hidden space-y-4">
-                            <div class="bg-slate-900/70 border border-slate-700/60 rounded-xl p-4">
-                                <div class="flex items-center justify-between mb-2">
-                                    <div>
-                                        <h2 class="text-sm sm:text-base font-semibold text-slate-100 flex items-center gap-2">
-                                            <span>📜</span>
-                                            <span>Histórico de análises</span>
-                                        </h2>
-                                        <p class="text-[11px] text-slate-400">
-                                            Veja as últimas análises realizadas e como os padrões se comportaram.
-                                        </p>
-                                    </div>
-                                    <button
-                                        id="btn-limpar-historico"
-                                        class="inline-flex items-center px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-medium text-slate-200 border border-slate-600/80 transition-colors"
-                                    >
-                                        <span>🗑️</span>
-                                        <span class="ml-1">Limpar histórico</span>
-                                    </button>
-                                </div>
-
-                                <div id="historico-lista" class="space-y-2 max-h-72 overflow-y-auto text-[11px] sm:text-xs text-slate-200">
-                                    <!-- Histórico será inserido aqui -->
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- TAB: AO VIVO -->
-                        <div id="content-aovivo" class="tab-content hidden space-y-4">
-                            <!-- Card: Status / Login -->
-                            <div class="bg-slate-900/70 border border-slate-700/60 rounded-xl p-4 space-y-3">
-                                <div class="flex items-center justify-between mb-2">
-                                    <h2 class="text-sm sm:text-base font-semibold text-slate-100 flex items-center gap-2">
-                                        <span>🎥</span>
-                                        <span>Ao vivo</span>
-                                    </h2>
-                                    <span id="live-status" class="text-xs text-slate-400">Aguardando...</span>
-                                </div>
-
-                                <!-- Seção de login -->
-                                <div id="live-login-section" class="space-y-2">
-                                    <p class="text-[11px] text-slate-400">
-                                        Faça login com o token da extensão para começar a receber resultados ao vivo.
-                                    </p>
-                                    <div class="flex flex-col sm:flex-row gap-2">
-                                        <input
-                                            id="live-token"
-                                            type="text"
-                                            class="flex-1 px-2 py-1.5 rounded-md bg-slate-950/80 border border-slate-700 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500/70"
-                                            placeholder="Cole aqui o token fornecido pela extensão..."
-                                        />
-                                        <button
-                                            id="btn-live-login"
-                                            type="button"
-                                            class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold text-white shadow-sm shadow-emerald-500/30 transition-all"
-                                        >
-                                            <span>🔗</span>
-                                            <span class="ml-1">Conectar</span>
-                                        </button>
-                                    </div>
-                                    <p class="text-[11px] text-slate-500">
-                                        O token é usado apenas localmente para autenticar a conexão com a extensão RevesBot.
-                                    </p>
-                                </div>
-
-                                <!-- Seção de info quando logado -->
-                                <div id="live-logged-section" class="hidden space-y-2">
-                                    <p class="text-[11px] text-emerald-300">
-                                        Conectado à extensão! Recebendo resultados ao vivo da mesa configurada.
-                                    </p>
-                                    <div class="flex flex-wrap items-center gap-2">
-                                        <span id="live-roulette-label" class="inline-flex items-center px-2 py-1 rounded-md bg-slate-800 text-[11px] text-slate-200 border border-slate-600">
-                                            Mesa: -
-                                        </span>
-                                        <span id="live-last-number" class="inline-flex items-center px-2 py-1 rounded-md bg-slate-800 text-[11px] text-slate-200 border border-slate-600">
-                                            Último número: -
-                                        </span>
-                                        <button
-                                            id="btn-live-logout"
-                                            type="button"
-                                            class="text-red-400 hover:text-red-300 text-xs border border-red-500/60 px-2 py-1 rounded-lg"
-                                        >
-                                            Sair
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Gerar nova análise -->
-                            <div class="bg-slate-900/70 border border-slate-700/60 rounded-xl p-4 space-y-3">
-                                <h3 class="text-xs sm:text-sm font-semibold text-slate-100 mb-1">⚡ Gerar nova análise</h3>
-                                <p class="text-[11px] text-slate-400 mb-2">
-                                    Gere uma nova análise para esta mesa.
-                                </p>
-                                <button
-                                    id="btn-gerar-analise"
-                                    type="button"
-                                    class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-2"
-                                >
-                                    <span>⚡</span>
-                                    <span>Gerar nova análise</span>
-                                </button>
-                                <div
-                                    id="favorito-status"
-                                    class="mt-2 text-[11px] text-gray-400 min-h-[1.25rem]"
-                                ></div>
-                            </div>
-                            <!-- Teste de aposta via WebSocket -->
-                            <!-- Executar aposta via extensão (usa WebSocket já aberto da mesa) -->
-                            <div class="bg-slate-900/70 border border-slate-700/60 rounded-xl p-4 space-y-3">
-                                <div class="flex items-center justify-between mb-1">
-                                    <h3 class="text-xs sm:text-sm font-semibold text-slate-100">⚡ Executar aposta</h3>
-                                    <span class="text-[10px] text-slate-400 uppercase tracking-wide">
-                                        via extensão
-                                    </span>
-                                </div>
-
-                                <p class="text-[11px] text-slate-400">
-                                    Ao clicar em "Executar aposta", o RevesBot envia um comando para a extensão com os números
-                                    sugeridos na aba "Sugestão". A extensão usa o WebSocket já aberto da mesa para colocar a aposta.
-                                </p>
-
-                                <button
-                                    id="btn-executar-aposta"
-                                    type="button"
-                                    class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-2"
-                                >
-                                    <span>🎰</span>
-                                    <span>Executar aposta</span>
-                                </button>
-
-                                <div
-                                    id="ws-aposta-status"
-                                    class="mt-2 text-[11px] text-gray-400 min-h-[1.25rem]"
-                                ></div>
-                            </div>
-
-                            <!-- Sugestão ao vivo -->
-                            <div class="bg-slate-900/70 border border-slate-700/60 rounded-xl p-4 space-y-4">
-                                <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-                                    <div>
-                                        <h3 class="text-xs sm:text-sm font-semibold text-slate-100 flex items-center gap-2">
-                                            <span>🎯</span>
-                                            <span>Sugestão ao vivo</span>
-                                        </h3>
-                                        <p class="text-[11px] text-slate-400">
-                                            Sugestão atual baseada nos últimos resultados recebidos ao vivo.
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <!-- Principais -->
+                        <!-- Seção de login -->
+                        <div id="live-login-section" class="space-y-3">
+                            <p class="text-xs text-gray-400">
+                                Faça login na casa de apostas para assistir a roleta dentro do painel.
+                            </p>
+                            <form id="live-login-form" class="space-y-3">
                                 <div>
-                                    <div class="flex items-center justify-between mb-1">
-                                        <span class="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
-                                            <span>🔥</span>
-                                            Principais
-                                        </span>
-                                        <span id="live-sugestao-principais-meta" class="text-[10px] text-slate-400"></span>
-                                    </div>
-                                    <div id="live-sugestao-principais" class="flex flex-wrap gap-2"></div>
+                                    <label for="live-email" class="block text-xs text-gray-300 mb-1">E-mail</label>
+                                    <input
+                                        id="live-email"
+                                        type="email"
+                                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="seu@email.com"
+                                        required
+                                    >
                                 </div>
+                                <div>
+                                    <label for="live-password" class="block text-xs text-gray-300 mb-1">Senha</label>
+                                    <input
+                                        id="live-password"
+                                        type="password"
+                                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="Sua senha da casa"
+                                        required
+                                    >
+                                </div>
+                                <button
+                                    id="btn-live-login"
+                                    type="submit"
+                                    class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-2 rounded-lg text-sm transition-all"
+                                >
+                                    🔐 Entrar na casa de apostas
+                                </button>
+                            </form>
+                        </div>
 
-                                <!-- Proteções -->
-                                <div class="border-t border-slate-700/60 pt-3">
-                                    <div class="flex items-center justify-between mb-1">
-                                        <span class="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
-                                            <span>🛡️</span>
-                                            Proteções
-                                        </span>
-                                        <span id="live-sugestao-protecoes-meta" class="text-[10px] text-slate-400"></span>
-                                    </div>
-                                    <div id="live-sugestao-protecoes" class="flex flex-wrap gap-2"></div>
+                        <!-- Seção de logado -->
+                        <div id="live-logged-section" class="hidden mt-3 text-xs text-gray-200">
+                            <div class="flex items-center justify-between mb-2">
+                                <div>
+                                    <p class="text-green-400 font-semibold">✅ Autenticado</p>
+                                    <p class="text-gray-300">
+                                        Usuário: <span id="live-user-info" class="font-semibold"></span>
+                                    </p>
                                 </div>
-
-                                <!-- Últimos números -->
-                                <div class="border-t border-slate-700/60 pt-3">
-                                    <div class="flex items-center justify-between mb-1">
-                                        <span class="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
-                                            <span>📡</span>
-                                            Últimos números ao vivo
-                                        </span>
-                                    </div>
-                                    <div id="live-sugestao-ultimos-numeros" class="flex flex-wrap gap-2"></div>
-                                </div>
+                                <button
+                                    id="btn-live-logout"
+                                    type="button"
+                                    class="text-red-400 hover:text-red-300 text-xs border border-red-500/60 px-2 py-1 rounded-lg"
+                                >
+                                    Sair
+                                </button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Coluna direita: Dados auxiliares / Info -->
-                    <div class="space-y-4">
-                        <!-- Card: Instruções rápidas -->
-                        <div class="bg-slate-900/70 border border-slate-700/60 rounded-xl p-4 space-y-3">
-                            <h2 class="text-sm sm:text-base font-semibold text-slate-100 flex items-center gap-2">
-                                <span>📌</span>
-                                <span>Como usar</span>
-                            </h2>
-                            <ol class="list-decimal list-inside text-[11px] sm:text-xs text-slate-300 space-y-1">
-                                <li>Cole os resultados da roleta no campo "Números anteriores".</li>
-                                <li>Ajuste as configurações de pesos e histórico conforme sua estratégia.</li>
-                                <li>Clique em "Analisar" para gerar a sugestão final.</li>
-                                <li>Verifique as proteções e, se desejar, envie a aposta via extensão.</li>
-                                <li>Use a aba "Ao vivo" para acompanhar resultados em tempo real.</li>
-                            </ol>
+                    <!-- Gerar nova análise -->
+                    <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4 space-y-3">
+                        <h3 class="text-sm font-semibold text-white mb-1">⚡ Gerar nova análise</h3>
+                        <p class="text-xs text-gray-400 mb-2">
+                            Gere uma nova análise para esta mesa.
+                        </p>
+                        <button
+                            id="btn-gerar-analise"
+                            type="button"
+                            class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-2"
+                        >
+                            <span>⚡</span>
+                            <span>Gerar nova análise</span>
+                        </button>
+                    </div>
+                    <!-- Teste de aposta via WebSocket -->
+                    <!-- Executar aposta via extensão (usa WebSocket já aberto da mesa) -->
+                    <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4 space-y-3">
+                        <div class="flex items-center justify-between mb-1">
+                            <h3 class="text-sm font-semibold text-white">⚡ Executar aposta</h3>
+                            <span class="text-[10px] text-gray-400 uppercase tracking-wide">
+                                via extensão
+                            </span>
                         </div>
 
-                        <!-- Card: Legenda de padrões -->
-                        <div class="bg-slate-900/70 border border-slate-700/60 rounded-xl p-4 space-y-3">
-                            <h2 class="text-sm sm:text-base font-semibold text-slate-100 flex items-center gap-2">
-                                <span>🧠</span>
-                                <span>Sobre os padrões</span>
-                            </h2>
-                            <ul class="text-[11px] sm:text-xs text-slate-300 space-y-1.5">
-                                <li>
-                                    <span class="font-semibold text-blue-300">ESTELAR:</span>
-                                    Explora relações de espelhos, terminais e figuras.
-                                </li>
-                                <li>
-                                    <span class="font-semibold text-emerald-300">CHAIN:</span>
-                                    Analisa a relação entre o número anterior e o próximo (puxadas).
-                                </li>
-                                <li>
-                                    <span class="font-semibold text-amber-300">TEMPORAL:</span>
-                                    Usa histórico por horário para reforçar números que tendem a aparecer em determinados períodos.
-                                </li>
-                                <li>
-                                    <span class="font-semibold text-rose-300">QUENTE:</span>
-                                    Destaca números mais frequentes no histórico recente.
-                                </li>
-                            </ul>
-                        </div>
+                        <p class="text-xs text-gray-400">
+                            Usa os números da sugestão atual e envia um comando de aposta para a extensão,
+                            que aproveita o WebSocket já aberto na mesa (nenhum segundo WebSocket é criado).
+                        </p>
 
-                        <!-- Card: Aviso -->
-                        <div class="bg-slate-900/70 border border-slate-700/60 rounded-xl p-4 space-y-2">
-                            <h2 class="text-sm sm:text-base font-semibold text-slate-100 flex items-center gap-2">
-                                <span>⚠️</span>
-                                <span>Aviso importante</span>
-                            </h2>
-                            <p class="text-[11px] sm:text-xs text-slate-300">
-                                Este sistema é uma ferramenta de apoio baseada em padrões estatísticos e históricos.
-                                Não há garantia de acerto em apostas. Jogue com responsabilidade.
+                        <button
+                            id="btn-executar-aposta"
+                            type="button"
+                            class="mt-2 w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-semibold py-2.5 px-4 rounded-lg text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <span class="text-lg leading-none">⚡</span>
+                            <span>Executar aposta</span>
+                        </button>
+
+                        <div
+                            id="ws-aposta-status"
+                            class="mt-2 text-[11px] text-gray-400 min-h-[1.25rem]"
+                        ></div>
+                    </div>
+
+                    <!-- Números atuais da sugestão -->
+                    <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4 space-y-3">
+                        <h3 class="text-sm font-semibold text-white mb-1">🎲 Números desta sugestão</h3>    
+                        <div class="mb-3">
+                            <p class="text-xs text-gray-400 mb-1">Principais:</p>
+                            <div id="live-sugestao-principais" class="flex flex-wrap gap-1">
+                                {% if dados.sugestoes.principais|length > 0 %}
+                                    {% for sugestao in dados.sugestoes.principais %}
+                                    <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold" data-numero="{{ sugestao.numero }}">
+                                        {{ sugestao.numero }}
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-gray-500 text-xs">Nenhuma sugestão disponível no momento.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if dados.sugestoes.protecoes|length > 0 %}
+                        <div>
+                            <p class="text-xs text-gray-400 mb-1">Proteções:</p>
+                            <div id="live-sugestao-protecoes" class="flex flex-wrap gap-1">
+                                {% for protecao in dados.sugestoes.protecoes %}
+                                <div class="bg-gray-700 text-gray-200 w-7 h-7 rounded-full flex items-center justify-center text-xs" data-numero="{{ protecao.numero }}">
+                                    {{ protecao.numero }}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        {% else %}
+                        <div id="live-sugestao-protecoes" class="flex flex-wrap gap-1"></div>
+                        {% endif %}
+                        <div>
+                            <p class="text-xs text-gray-400 mb-1">📊 Últimos 10 números da mesa</p>
+                            <div id="live-sugestao-ultimos-numeros" class="flex flex-wrap gap-2">
+                                {% for num in dados.analise.ultimos_10 %}
+                                <span class="bg-gray-600 text-white px-4 py-2 rounded-lg font-bold">{{ num }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Coluna direita: iframe -->
+                <div class="w-full lg:w-2/3">
+                    <div class="relative rounded-xl border border-gray-700 overflow-hidden bg-black">
+                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none" id="live-iframe-placeholder">
+                            <p class="text-gray-500 text-sm text-center px-4">
+                                Aguardando login e carregamento do jogo.<br>
+                                Após autenticar, o vídeo será carregado automaticamente para esta mesa.
                             </p>
                         </div>
+                        <iframe
+                            id="live-iframe"
+                            src=""
+                            class="w-full h-[420px] md:h-[520px] lg:h-[560px] hidden"
+                            frameborder="0"
+                            allowfullscreen
+                        ></iframe>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Tab: Histórico -->
+        <div id="content-historico" class="hidden bg-gray-800/50 backdrop-blur-sm rounded-b-xl p-6 mb-6 border border-gray-700">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-white">📜 Histórico de Sugestões (últimas 20)</h2>
+                <button onclick="limparHistorico()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-all text-sm">
+                    🗑️ Limpar Histórico
+                </button>
+            </div>
+            <div id="lista-historico" class="space-y-4">
+                <!-- Será preenchido via JavaScript -->
+            </div>
+        </div>
+
     </div>
 
     <script>
         // ==========================================
-        // CONSTANTES E CONFIGURAÇÃO
+        // CONSTANTES
         // ==========================================
-        const CONFIG_KEY = 'analizer_config_v1';
-        const HISTORY_KEY = 'analizer_history_v1';
+        
+        const CONFIG_KEY = 'analizer_config';
+        const HISTORICO_KEY = 'analizer_historico';
 
-        // Para simplificar, fixamos o slug padrão da mesa.
-        // Em uma versão integrada, isso pode ser dinâmico (por exemplo, vindo da rota ou do backend).
-        const CURRENT_ROULETTE_SLUG = 'pragmatic-brazilian-roulette';
+        const API_BASE = 'https://auth.revesbot.com.br';
 
-        // Mapeamento de slug => UID da mesa (apenas exemplo, aproveitando algo que você já usa)
-        const ROULETTE_UID_MAP = {
-            "pragmatic-mega-roulette-br": "1234",
+        const CURRENT_ROULETTE_SLUG = "{{ dados.roulette_id }}";
+        const ROULETTE_SLUG_TO_GAME_ID = {
+            "pragmatic-korean-roulette": "457",
+            "pragmatic-speed-roulette-1": "556",
+            "pragmatic-auto-roulette": "373",
+            "pragmatic-mega-roulette-brazilian": "6478",
+            "pragmatic-mega-roulette": "550",
             "pragmatic-brazilian-roulette": "450",
             "pragmatic-auto-mega-roulette": "543",
             "pragmatic-immersive-roulette-deluxe": "8261",
@@ -652,14 +756,6 @@
         };
 
         const SUGESTAO_JSON_URL = '/api/sugestao/' + CURRENT_ROULETTE_SLUG;
-
-        const PRAGMATIC_FAV_CONFIG = {
-            stakePorNumero: 0.5,
-            nomeBase: 'My Bet',
-            gameType: 'classic-roulette'
-        };
-
-        let pragmaticFavCounter = 0;
 
         let liveIsLogged = false;
 
@@ -674,15 +770,15 @@
             }
             return {
                 quantidade: 6,
-                limite_historico: 80,
-                incluir_protecoes: true,
+                limite_historico: 2000,
                 max_protecoes: 6,
+                incluir_protecoes: true,
                 incluir_zero: true,
-                w_estelar: 0.5,
-                w_chain: 0.7,
-                w_temporal: 0.4,
-                w_quente: 0.3,
-                minute_offset: 0,
+                w_estelar: 0.25,
+                w_chain: 0.25,
+                w_temporal: 0.25,
+                w_quente: 0.25,
+                minute_offset: 3,
                 interval_minutes: 5,
                 days_back: 30
             };
@@ -692,435 +788,385 @@
             localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
         }
 
-        // Aplica as configs nos inputs
-        function aplicarConfiguracoesNosInputs() {
-            const config = carregarConfiguracoes();
+        function lerFormulario() {
+            return {
+                quantidade: parseInt(document.getElementById('config-quantidade').value),
+                limite_historico: parseInt(document.getElementById('config-limite-historico').value),
+                max_protecoes: parseInt(document.getElementById('config-max-protecoes').value),
+                incluir_protecoes: document.getElementById('config-incluir-protecoes').checked,
+                incluir_zero: document.getElementById('config-incluir-zero').checked,
+                w_estelar: parseFloat(document.getElementById('config-w-estelar').value),
+                w_chain: parseFloat(document.getElementById('config-w-chain').value),
+                w_temporal: parseFloat(document.getElementById('config-w-temporal').value),
+                w_quente: parseFloat(document.getElementById('config-w-quente').value),
+                minute_offset: parseInt(document.getElementById('config-minute-offset').value),
+                interval_minutes: parseInt(document.getElementById('config-interval-minutes').value),
+                days_back: parseInt(document.getElementById('config-days-back').value)
+            };
+        }
+
+        function preencherFormulario(config) {
             document.getElementById('config-quantidade').value = config.quantidade;
             document.getElementById('config-limite-historico').value = config.limite_historico;
-            document.getElementById('config-incluir-protecoes').checked = !!config.incluir_protecoes;
             document.getElementById('config-max-protecoes').value = config.max_protecoes;
-            document.getElementById('config-incluir-zero').checked = !!config.incluir_zero;
-
+            document.getElementById('config-incluir-protecoes').checked = config.incluir_protecoes;
+            document.getElementById('config-incluir-zero').checked = config.incluir_zero;
             document.getElementById('config-w-estelar').value = config.w_estelar;
             document.getElementById('config-w-chain').value = config.w_chain;
             document.getElementById('config-w-temporal').value = config.w_temporal;
-            document.getElementById('config-w-quente').value = config.w_quente;
-
-            document.getElementById('config-minute-offset').value = config.minute_offset;
+            document.getElementById('config-w-quente').value = config.w_quente ?? 0.25;
+            document.getElementById('config-minute-offset').value = config.minute_offset ?? 3;
             document.getElementById('config-interval-minutes').value = config.interval_minutes;
             document.getElementById('config-days-back').value = config.days_back;
         }
 
-        // Lê valores dos inputs e devolve o objeto config
-        function lerConfiguracoesDosInputs() {
-            const config = carregarConfiguracoes();
-            const parseFloatOr = (val, fallback) =>
-                Number.isNaN(parseFloat(val)) ? fallback : parseFloat(val);
-            const parseIntOr = (val, fallback) => {
-                const n = parseInt(val, 10);
-                return Number.isNaN(n) ? fallback : n;
+        function resetarConfiguracoes() {
+            if (confirm('⚠️ Tem certeza que deseja restaurar as configurações padrão?')) {
+                localStorage.removeItem(CONFIG_KEY);
+                const config = carregarConfiguracoes();
+                preencherFormulario(config);
+                atualizarSomaPesos();
+                alert('✅ Configurações restauradas!');
+            }
+        }
+
+        function atualizarSomaPesos() {
+            const estelar = parseFloat(document.getElementById('config-w-estelar').value) || 0;
+            const chain = parseFloat(document.getElementById('config-w-chain').value) || 0;
+            const temporal = parseFloat(document.getElementById('config-w-temporal').value) || 0;
+            const quente = parseFloat(document.getElementById('config-w-quente').value) || 0;
+            
+            const soma = estelar + chain + temporal + quente;
+            document.getElementById('soma-pesos').textContent = soma.toFixed(2);
+        }
+
+        ['config-w-estelar', 'config-w-chain', 'config-w-temporal', 'config-w-quente'].forEach(id => {
+            document.getElementById(id).addEventListener('input', atualizarSomaPesos);
+        });
+
+        // ==========================================
+        // SUBMIT DO FORMULÁRIO
+        // ==========================================
+
+        document.getElementById('configForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const config = lerFormulario();
+            salvarConfiguracoes(config);
+            alert('✅ Configurações salvas com sucesso!');
+            atualizarSugestao();
+        });
+
+        // ==========================================
+        // HISTÓRICO - LOCALSTORAGE
+        // ==========================================
+
+        function salvarNoHistorico(dados) {
+            let historico = JSON.parse(localStorage.getItem(HISTORICO_KEY) || '[]');
+            
+            const entrada = {
+                timestamp: new Date().toISOString(),
+                horario: new Date().toLocaleString('pt-BR'),
+                sugestoes: dados.sugestoes.principais.map(s => s.numero),
+                protecoes: dados.sugestoes.protecoes.map(p => p.numero),
+                ultimos_10: dados.analise.ultimos_10,
+                ultimo_numero: dados.analise.ultimo_numero,
+                total_numeros: dados.sugestoes.total_numeros,
+                pesos: dados.configuracao.pesos
             };
 
-            config.quantidade = parseIntOr(document.getElementById('config-quantidade').value, config.quantidade);
-            config.limite_historico = parseIntOr(document.getElementById('config-limite-historico').value, config.limite_historico);
-            config.incluir_protecoes = document.getElementById('config-incluir-protecoes').checked;
-            config.max_protecoes = parseIntOr(document.getElementById('config-max-protecoes').value, config.max_protecoes);
-            config.incluir_zero = document.getElementById('config-incluir-zero').checked;
+            historico.unshift(entrada);
+            historico = historico.slice(0, 20);
 
-            config.w_estelar = parseFloatOr(document.getElementById('config-w-estelar').value, config.w_estelar);
-            config.w_chain = parseFloatOr(document.getElementById('config-w-chain').value, config.w_chain);
-            config.w_temporal = parseFloatOr(document.getElementById('config-w-temporal').value, config.w_temporal);
-            config.w_quente = parseFloatOr(document.getElementById('config-w-quente').value, config.w_quente);
-
-            config.minute_offset = parseIntOr(document.getElementById('config-minute-offset').value, config.minute_offset);
-            config.interval_minutes = parseIntOr(document.getElementById('config-interval-minutes').value, config.interval_minutes);
-            config.days_back = parseIntOr(document.getElementById('config-days-back').value, config.days_back);
-
-            salvarConfiguracoes(config);
-            return config;
+            localStorage.setItem(HISTORICO_KEY, JSON.stringify(historico));
         }
-
-        // ==========================================
-        // HISTÓRICO
-        // ==========================================
 
         function carregarHistorico() {
-            const histStr = localStorage.getItem(HISTORY_KEY);
-            if (!histStr) return [];
-            try {
-                return JSON.parse(histStr);
-            } catch (err) {
-                console.error('Erro ao parsear histórico:', err);
-                return [];
-            }
-        }
-
-        function salvarHistorico(hist) {
-            localStorage.setItem(HISTORY_KEY, JSON.stringify(hist));
-        }
-
-        function adicionarHistorico(entry) {
-            const hist = carregarHistorico();
-            hist.unshift(entry);
-            // Limite de 50 entradas para não crescer demais
-            if (hist.length > 50) {
-                hist.pop();
-            }
-            salvarHistorico(hist);
-        }
-
-        function renderHistorico() {
-            const lista = document.getElementById('historico-lista');
-            const hist = carregarHistorico();
-
-            if (!hist.length) {
-                lista.innerHTML = '<p class="text-[11px] text-slate-400">Nenhuma análise salva ainda.</p>';
-                return;
-            }
-
-            lista.innerHTML = hist
-                .map((entry, index) => {
-                    const data = entry.dataHora || '-';
-                    const numeros = (entry.numeros || []).join(', ');
-                    const principais = (entry.principais || []).join(', ');
-                    const protecoes = (entry.protecoes || []).join(', ');
-                    const mesa = entry.rouletteSlug || '-';
-
-                    return `
-                        <div class="border border-slate-700/70 rounded-lg p-2 bg-slate-950/60">
-                            <div class="flex flex-wrap items-center justify-between gap-1 mb-1">
-                                <span class="text-[11px] font-semibold text-slate-200">
-                                    #${hist.length - index} · ${data}
-                                </span>
-                                <span class="text-[10px] text-slate-400">
-                                    Mesa: ${mesa}
-                                </span>
-                            </div>
-                            <div class="text-[10px] text-slate-300 space-y-0.5">
-                                <p><span class="font-semibold text-slate-100">Entrada:</span> ${numeros}</p>
-                                <p><span class="font-semibold text-blue-300">Principais:</span> ${principais}</p>
-                                <p><span class="font-semibold text-amber-300">Proteções:</span> ${protecoes || '-'}</p>
-                            </div>
-                        </div>
-                    `;
-                })
-                .join('');
+            return JSON.parse(localStorage.getItem(HISTORICO_KEY) || '[]');
         }
 
         function limparHistorico() {
-            localStorage.removeItem(HISTORY_KEY);
-            renderHistorico();
-        }
-
-        // ==========================================
-        // PARSING DOS NÚMEROS DE ENTRADA
-        // ==========================================
-
-        function parseNumerosInput(raw) {
-            if (!raw) return [];
-            // Substitui quebras de linha por espaço, remove tudo que não for dígito ou espaço
-            const limpo = raw
-                .replace(/[\n\r\t]+/g, ' ')
-                .replace(/[^0-9 ]+/g, ' ')
-                .trim();
-
-            if (!limpo) return [];
-            return limpo
-                .split(/\s+/)
-                .map((x) => parseInt(x, 10))
-                .filter((n) => !Number.isNaN(n) && n >= 0 && n <= 36);
-        }
-
-        // ==========================================
-        // LÓGICA DE ANÁLISE (ESTELAR, CHAIN, TEMPORAL, QUENTE)
-        // ==========================================
-
-        /**
-         * Exemplo simplificado de análise ESTELAR:
-         * - contabiliza espelhos (par fixo de números)
-         * - contabiliza terminais
-         */
-        const ESPELHOS = {
-            1: [10],
-            10: [1],
-            2: [20],
-            20: [2],
-            3: [30],
-            30: [3],
-            6: [9],
-            9: [6],
-            11: [22, 33],
-            22: [11, 33],
-            33: [11, 22],
-            12: [21],
-            21: [12],
-            13: [31],
-            31: [13],
-            16: [19],
-            19: [16],
-            23: [32],
-            32: [23],
-            26: [29],
-            29: [26]
-        };
-
-        function getTerminal(n) {
-            return n % 10;
-        }
-
-        function getVizinhanca(n) {
-            // Vizinhos simplificados: n-1, n+1 (ajustando para a roleta)
-            const vizinhos = [];
-            if (n === 0) {
-                // 0 costuma ter vizinhos específicos, mas aqui simplificamos
-                vizinhos.push(1, 26);
-                return vizinhos;
+            if (confirm('⚠️ Tem certeza que deseja limpar todo o histórico?')) {
+                localStorage.removeItem(HISTORICO_KEY);
+                exibirHistorico();
+                alert('✅ Histórico limpo com sucesso!');
             }
-            if (n - 1 >= 0) vizinhos.push(n - 1);
-            if (n + 1 <= 36) vizinhos.push(n + 1);
-            return vizinhos;
         }
 
-        function analisarEstelar(numeros, pesos) {
-            const { w_estelar } = pesos;
-            const scoreEstelar = new Map();
+        function exibirHistorico() {
+            const historico = carregarHistorico();
+            const container = document.getElementById('lista-historico');
 
-            numeros.forEach((n) => {
-                if (!scoreEstelar.has(n)) scoreEstelar.set(n, 0);
-            });
-
-            // Espelhos
-            numeros.forEach((n) => {
-                const esp = ESPELHOS[n] || [];
-                esp.forEach((e) => {
-                    const atual = scoreEstelar.get(e) || 0;
-                    scoreEstelar.set(e, atual + 2 * w_estelar);
-                });
-            });
-
-            // Terminais
-            const terminalCount = new Map();
-            numeros.forEach((n) => {
-                const t = getTerminal(n);
-                terminalCount.set(t, (terminalCount.get(t) || 0) + 1);
-            });
-
-            terminalCount.forEach((count, t) => {
-                if (count > 1) {
-                    // Se um terminal aparece mais de uma vez, reforça todos números com esse terminal
-                    numeros.forEach((n) => {
-                        if (getTerminal(n) === t) {
-                            const atual = scoreEstelar.get(n) || 0;
-                            scoreEstelar.set(n, atual + count * w_estelar);
-                        }
-                    });
-                }
-            });
-
-            return scoreEstelar;
-        }
-
-        /**
-         * Exemplo simplificado de análise CHAIN:
-         * - Para cada par consecutivo (a,b), reforça a ligação a->b.
-         */
-        function analisarChain(numeros, pesos) {
-            const { w_chain } = pesos;
-            const scoreChain = new Map();
-
-            numeros.forEach((n) => {
-                if (!scoreChain.has(n)) scoreChain.set(n, 0);
-            });
-
-            for (let i = 0; i < numeros.length - 1; i++) {
-                const atual = numeros[i];
-                const prox = numeros[i + 1];
-                const sAtual = scoreChain.get(prox) || 0;
-                scoreChain.set(prox, sAtual + 2 * w_chain);
-
-                // Pequeno reforço também no "atual"
-                const sAtual2 = scoreChain.get(atual) || 0;
-                scoreChain.set(atual, sAtual2 + 1 * w_chain);
-            }
-
-            return scoreChain;
-        }
-
-        /**
-         * Exemplo simplificado de análise QUENTE:
-         * - Contabiliza frequência dos últimos X resultados
-         */
-        function analisarQuente(numeros, pesos) {
-            const { w_quente } = pesos;
-            const scoreQuente = new Map();
-
-            numeros.forEach((n) => {
-                if (!scoreQuente.has(n)) scoreQuente.set(n, 0);
-                const atual = scoreQuente.get(n) || 0;
-                scoreQuente.set(n, atual + 1 * w_quente);
-            });
-
-            return scoreQuente;
-        }
-
-        /**
-         * Exemplo simplificado de análise TEMPORAL:
-         * - Aqui faremos algo bem básico: reforça número que apareceu mais no histórico recente
-         *   apenas para mostrar a integração dos pesos. Você pode adaptar para o seu endpoint real.
-         */
-        function analisarTemporalFake(numeros, pesos) {
-            const { w_temporal } = pesos;
-            const scoreTemporal = new Map();
-            numeros.forEach((n) => {
-                if (!scoreTemporal.has(n)) scoreTemporal.set(n, 0);
-                const atual = scoreTemporal.get(n) || 0;
-                scoreTemporal.set(n, atual + 0.5 * w_temporal);
-            });
-            return scoreTemporal;
-        }
-
-        /**
-         * Faz o merge das pontuações dos padrões em um score final.
-         */
-        function combinarScores(scoresMaps) {
-            const finalScore = new Map();
-
-            scoresMaps.forEach((mapa) => {
-                mapa.forEach((valor, numero) => {
-                    const atual = finalScore.get(numero) || 0;
-                    finalScore.set(numero, atual + valor);
-                });
-            });
-
-            return finalScore;
-        }
-
-        function ordenarPorScore(finalScore, limite) {
-            const arr = Array.from(finalScore.entries());
-            arr.sort((a, b) => b[1] - a[1]); // ordem decrescente
-            if (limite && limite > 0) {
-                return arr.slice(0, limite);
-            }
-            return arr;
-        }
-
-        // ==========================================
-        // ANÁLISE LOCAL (BOTÃO "ANALISAR")
-        // ==========================================
-
-        function executarAnaliseLocal() {
-            const raw = document.getElementById('input-numeros').value;
-            const numeros = parseNumerosInput(raw);
-            const feedbackEl = document.getElementById('input-numeros-feedback');
-
-            if (!numeros.length) {
-                feedbackEl.textContent = 'Nenhum número válido encontrado. Digite ou cole os resultados da roleta.';
+            if (historico.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 text-center py-8">Nenhuma sugestão salva ainda.</p>';
                 return;
             }
 
-            const config = lerConfiguracoesDosInputs();
-            const limiteHistorico = config.limite_historico;
-            const analisados = numeros.slice(0, limiteHistorico);
-
-            feedbackEl.textContent = `Analisando ${analisados.length} números (de ${numeros.length} total no input).`;
-
-            const pesos = {
-                w_estelar: config.w_estelar,
-                w_chain: config.w_chain,
-                w_temporal: config.w_temporal,
-                w_quente: config.w_quente
-            };
-
-            const scoreEstelar = analisarEstelar(analisados, pesos);
-            const scoreChain = analisarChain(analisados, pesos);
-            const scoreQuente = analisarQuente(analisados, pesos);
-            const scoreTemporal = analisarTemporalFake(analisados, pesos);
-
-            const finalScore = combinarScores([scoreEstelar, scoreChain, scoreQuente, scoreTemporal]);
-            const ordenado = ordenarPorScore(finalScore);
-
-            const quantidade = config.quantidade || 6;
-            const principais = ordenado.slice(0, quantidade).map(([numero, score]) => ({
-                numero,
-                score: score.toFixed(2)
-            }));
-
-            // Proteções: próximos 10 (apenas exemplo)
-            const protecoes = ordenado
-                .slice(quantidade, quantidade + (config.max_protecoes || 6))
-                .map(([numero]) => numero);
-
-            renderSugestao(principais, protecoes);
-
-            const agora = new Date();
-            const dataHora = agora.toLocaleString('pt-BR', {
-                dateStyle: 'short',
-                timeStyle: 'short'
-            });
-
-            adicionarHistorico({
-                dataHora,
-                numeros: analisados,
-                principais: principais.map((p) => p.numero),
-                protecoes,
-                rouletteSlug: CURRENT_ROULETTE_SLUG
-            });
-
-            renderHistorico();
-        }
-
-        function renderSugestao(principais, protecoes) {
-            const principaisContainer = document.getElementById('sugestao-principais');
-            const protecoesContainer = document.getElementById('sugestao-protecoes');
-            const protecoesIndicator = document.getElementById('protecoes-count-indicator');
-
-            if (!principaisContainer || !protecoesContainer) return;
-
-            if (!principais || !principais.length) {
-                principaisContainer.innerHTML = '<p class="text-[11px] text-slate-400">Nenhuma sugestão calculada.</p>';
-            } else {
-                principaisContainer.innerHTML = principais
-                    .map((p) => {
-                        const numero = p.numero;
-                        const score = p.score;
-                        return `
-                            <div class="numero-chip inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-600/20 border border-blue-500/40 text-xs">
-                                <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold">
-                                    ${numero}
-                                </span>
-                                <span class="text-[10px] text-blue-100">score: ${score}</span>
+            container.innerHTML = historico.map((item, index) => `
+                <div class="bg-gray-700/50 rounded-lg p-4 border border-gray-600">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <p class="text-white font-semibold">📅 ${item.horario}</p>
+                            <p class="text-gray-400 text-sm">Último número: <span class="text-yellow-400 font-bold">${item.ultimo_numero}</span></p>
+                            ${item.pesos ? `<p class="text-gray-500 text-xs mt-1">
+                                Pesos:
+                                ${item.pesos.estelar !== undefined ? ' E:' + item.pesos.estelar.toFixed(2) : ''}
+                                ${item.pesos.chain !== undefined ? ' C:' + item.pesos.chain.toFixed(2) : ''}
+                                ${item.pesos.temporal !== undefined ? ' T:' + item.pesos.temporal.toFixed(2) : ''}
+                                ${item.pesos.quente !== undefined ? ' Q:' + item.pesos.quente.toFixed(2) : ''}
+                            </p>` : ''}
+                        </div>
+                        <span class="text-gray-500 text-xs">#${index + 1}</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <p class="text-gray-400 text-xs mb-1">🎯 Sugestões:</p>
+                            <div class="flex flex-wrap gap-1">
+                                ${item.sugestoes.map(num => `
+                                    <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold">${num}</div>
+                                `).join('')}
                             </div>
-                        `;
-                    })
-                    .join('');
-            }
+                        </div>
+                        ${item.protecoes && item.protecoes.length > 0 ? `
+                        <div>
+                            <p class="text-gray-400 text-xs mb-1">🛡️ Proteções (${item.total_numeros} total):</p>
+                            <div class="flex flex-wrap gap-1">
+                                ${item.protecoes.map(num => `
+                                    <div class="bg-gray-600 text-gray-300 w-7 h-7 rounded-full flex items-center justify-center text-xs">${num}</div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                        <div>
+                            <p class="text-gray-400 text-xs mb-1">📊 Últimos 10 da mesa:</p>
+                            <div class="flex flex-wrap gap-1">
+                                ${item.ultimos_10.map(num => `
+                                    <div class="bg-gray-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs">${num}</div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
 
-            if (!protecoes || !protecoes.length) {
-                protecoesContainer.innerHTML = '<p class="text-[11px] text-slate-500">Nenhuma proteção sugerida.</p>';
-                if (protecoesIndicator) {
-                    protecoesIndicator.textContent = '';
+        // ==========================================
+        // AO VIVO - LOGIN + IFRAME
+        // ==========================================
+
+        function getCurrentGameIdFromSlug() {
+            if (!CURRENT_ROULETTE_SLUG) return null;
+            return ROULETTE_SLUG_TO_GAME_ID[CURRENT_ROULETTE_SLUG] || null;
+        }
+
+        function liveSetStatus(message, type = 'info') {
+            const el = document.getElementById('live-status');
+            if (!el) return;
+
+            let colorClass = 'text-gray-300';
+            if (type === 'success') colorClass = 'text-green-400';
+            else if (type === 'warning') colorClass = 'text-yellow-400';
+            else if (type === 'danger') colorClass = 'text-red-400';
+
+            el.className = 'text-xs ' + colorClass;
+            el.textContent = message;
+        }
+
+        function liveToggleLoggedUI(isLogged, userNameOrEmail) {
+            const loginSection  = document.getElementById('live-login-section');
+            const loggedSection = document.getElementById('live-logged-section');
+            const userInfoSpan  = document.getElementById('live-user-info');
+
+            if (!loginSection || !loggedSection) return;
+
+            liveIsLogged = !!isLogged;
+
+            if (isLogged) {
+                loginSection.classList.add('hidden');
+                loggedSection.classList.remove('hidden');
+
+                if (userInfoSpan) {
+                    userInfoSpan.textContent = userNameOrEmail || '';
                 }
             } else {
-                protecoesContainer.innerHTML = protecoes
-                    .map(
-                        (n) => `
-                        <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-800 border border-slate-600 text-xs text-slate-100">
-                            ${n}
-                        </span>
-                    `
-                    )
-                    .join('');
-                if (protecoesIndicator) {
-                    protecoesIndicator.textContent = `${protecoes.length} proteção(ões)`;
+                loginSection.classList.remove('hidden');
+                loggedSection.classList.add('hidden');
+            }
+        }
+
+        async function verifyBookmakerLogin() {
+            try {
+                liveSetStatus('Verificando sessão na casa de apostas...', 'info');
+
+                const res = await fetch(`${API_BASE}/api/bookmaker/verify`, {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const data = await res.json();
+
+                if (data.isConnected) {
+                    const user = data.user || {};
+                    const name = user.name || user.email || 'Usuário';
+                    liveSetStatus('Autenticado como ' + name, 'success');
+                    liveToggleLoggedUI(true, name);
+
+                    const autoGameId = getCurrentGameIdFromSlug();
+                    if (autoGameId) {
+                        setTimeout(() => {
+                            startLiveGame();
+                        }, 300);
+                    }
+                } else {
+                    liveSetStatus('Você não está autenticado na casa de apostas.', 'warning');
+                    liveToggleLoggedUI(false);
                 }
+            } catch (err) {
+                console.error('[Ao vivo] Erro em verifyBookmakerLogin', err);
+                liveSetStatus('Erro ao verificar autenticação.', 'danger');
+                liveToggleLoggedUI(false);
+            }
+        }
+
+        async function doLiveLogin(email, password) {
+            const loginBtn = document.getElementById('btn-live-login');
+            if (loginBtn) loginBtn.disabled = true;
+
+            try {
+                liveSetStatus('Realizando login...', 'info');
+
+                const res = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email,
+                        password
+                    })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.isConnected) {
+                    liveSetStatus('Login realizado com sucesso! Validando sessão...', 'success');
+                    await verifyBookmakerLogin();
+                    return true;
+                } else {
+                    const msg = data.error || data.message || 'Falha ao autenticar na casa de apostas.';
+                    liveSetStatus(msg, 'danger');
+                    liveToggleLoggedUI(false);
+                    return false;
+                }
+            } catch (err) {
+                console.error('[Ao vivo] Erro em doLiveLogin', err);
+                liveSetStatus('Erro ao realizar login.', 'danger');
+                liveToggleLoggedUI(false);
+                return false;
+            } finally {
+                if (loginBtn) loginBtn.disabled = false;
+            }
+        }
+
+        function doLiveLogout() {
+            const iframe = document.getElementById('live-iframe');
+            const placeholder = document.getElementById('live-iframe-placeholder');
+            if (iframe) {
+                iframe.src = '';
+                iframe.classList.add('hidden');
+            }
+            if (placeholder) {
+                placeholder.classList.remove('hidden');
+            }
+            liveSetStatus('Sessão local limpa. O cookie poderá continuar válido até expirar.', 'warning');
+            liveToggleLoggedUI(false);
+        }
+
+        async function startLiveGame() {
+            const iframe    = document.getElementById('live-iframe');
+            const placeholder = document.getElementById('live-iframe-placeholder');
+
+            if (!iframe) return;
+
+            const gameId = getCurrentGameIdFromSlug();
+            if (!gameId) {
+                liveSetStatus('Não foi possível determinar o gameId desta mesa.', 'warning');
+                return;
+            }
+
+            try {
+                liveSetStatus('Solicitando link do jogo...', 'info');
+
+                const res = await fetch(`${API_BASE}/api/start-game/${encodeURIComponent(gameId)}`, {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const data = await res.json();
+
+                if (!res.ok || !data.success || !data.link) {
+                    const msg = data.message || 'Não foi possível iniciar o jogo.';
+                    liveSetStatus(msg, 'danger');
+                    return;
+                }
+
+                iframe.src = data.link;
+                iframe.classList.remove('hidden');
+                if (placeholder) {
+                    placeholder.classList.add('hidden');
+                }
+                liveSetStatus('Jogo iniciado. Iframe carregando...', 'success');
+            } catch (err) {
+                console.error('[Ao vivo] Erro em startLiveGame', err);
+                liveSetStatus('Erro ao iniciar jogo.', 'danger');
+            }
+        }
+
+        function initAoVivo() {
+            const formLogin = document.getElementById('live-login-form');
+            const btnLogout = document.getElementById('btn-live-logout');
+            const btnGerar  = document.getElementById('btn-gerar-analise');
+
+            if (formLogin) {
+                formLogin.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const emailEl = document.getElementById('live-email');
+                    const passEl  = document.getElementById('live-password');
+
+                    const email = emailEl ? emailEl.value.trim() : '';
+                    const password = passEl ? passEl.value : '';
+
+                    if (!email || !password) {
+                        liveSetStatus('Preencha e-mail e senha.', 'warning');
+                        return;
+                    }
+
+                    await doLiveLogin(email, password);
+                });
+            }
+
+            if (btnLogout) {
+                btnLogout.addEventListener('click', () => {
+                    doLiveLogout();
+                });
+            }
+
+            if (btnGerar) {
+                btnGerar.addEventListener('click', () => {
+                    gerarNovaAnalise();
+                });
             }
         }
 
         // ==========================================
-        // AO VIVO - RENDERIZAÇÃO DA SUGESTÃO
+        // RENDER DA SUGESTÃO NA ABA AO VIVO
         // ==========================================
-
-        let currentAnalise = null;
 
         function renderLiveSugestao(data) {
             const principaisContainer = document.getElementById('live-sugestao-principais');
@@ -1130,28 +1176,25 @@
             if (principaisContainer) {
                 const principais = (data.sugestoes && data.sugestoes.principais) || [];
                 if (!principais.length) {
-                    principaisContainer.innerHTML = '<p class="text-[11px] text-slate-500">Nenhuma sugestão disponível no momento.</p>';
+                    principaisContainer.innerHTML = '<p class="text-gray-500 text-xs">Nenhuma sugestão disponível no momento.</p>';
                 } else {
                     principaisContainer.innerHTML = principais.map(s => {
-                        const numero = s.numero !== undefined ? s.numero : s;
-                        const score = s.score !== undefined ? s.score : null;
-                        return `
+                    const numero = s.numero !== undefined ? s.numero : s;
+                    const score = s.score !== undefined ? s.score : null;
+                    return `
                         <div
-                            class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-600/20 border border-blue-500/40 text-xs"
+                            class="bg-blue-600 rounded-lg p-3 text-center"
+                            data-numero="${numero}"
                         >
-                            <span
-                                class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold"
-                            >
-                                ${numero}
-                            </span>
+                            <div class="text-xl font-bold text-white">${numero}</div>
                             ${
                                 score !== null
-                                    ? `<span class="text-[10px] text-blue-100">score: ${Number(score).toFixed(2)}</span>`
+                                    ? `<div class="text-[11px] text-blue-100 mt-1">${(score * 100).toFixed(1)}%</div>`
                                     : ''
                             }
                         </div>
                     `;
-                    }).join('');
+                }).join('');
                 }
             }
 
@@ -1163,7 +1206,7 @@
                     protecoesContainer.innerHTML = protecoes.map(p => {
                         const numero = p.numero !== undefined ? p.numero : p;
                         return `
-                            <div class="bg-slate-700 text-slate-200 px-2 py-1 rounded-full text-xs">
+                            <div class="bg-gray-700 text-gray-200 w-7 h-7 rounded-full flex items-center justify-center text-xs">
                                 ${numero}
                             </div>
                         `;
@@ -1172,14 +1215,14 @@
             }
 
             if (ultimosNumerosContainer) {
-                const ultimosNumeros = (data.analise && data.analise.ultimos_10) || [];
+                const ultimosNumeros = (data.sugestoes && data.analise.ultimos_10) || [];
                 if (!ultimosNumeros.length) {
                     ultimosNumerosContainer.innerHTML = '';
                 } else {
                     ultimosNumerosContainer.innerHTML = ultimosNumeros.map(p => {
                         const numero = p.numero !== undefined ? p.numero : p;
                         return `
-                            <div class="bg-slate-700 text-slate-200 px-2 py-1 rounded-full text-xs">
+                            <div class="bg-gray-700 text-gray-200 w-7 h-7 rounded-full flex items-center justify-center text-xs">
                                 ${numero}
                             </div>
                         `;
@@ -1188,128 +1231,9 @@
             }
         }
 
-        function setFavoritoStatus(message, type = 'info') {
-            const statusEl = document.getElementById('favorito-status');
-            if (!statusEl) return;
-
-            let color = 'text-gray-400';
-            if (type === 'error')   color = 'text-red-400';
-            if (type === 'success') color = 'text-emerald-400';
-            if (type === 'warn')    color = 'text-amber-300';
-
-            statusEl.className = 'mt-2 text-[11px] min-h-[1.25rem] ' + color;
-            statusEl.textContent = message || '';
-        }
-
-        function mapNumeroPragmatic(n) {
-            const numero = Number(n);
-            if (Number.isNaN(numero)) return null;
-            if (numero === 0) return 2;
-            return numero + 3;
-        }
-
-        async function salvarFavoritoPragmaticFromAnalise(analise) {
-            if (!analise || !analise.sugestoes) {
-                console.warn('[Favoritos] Análise inválida para salvar favorito.');
-                return;
-            }
-
-            const principais = analise.sugestoes.principais || [];
-            if (!Array.isArray(principais) || principais.length === 0) {
-                setFavoritoStatus('Nenhuma sugestão para salvar como favorita.', 'warn');
-                return;
-            }
-
-            const numerosBase = principais.map((s) => {
-                if (s && typeof s === 'object' && 'numero' in s) {
-                    return s.numero;
-                }
-                return s;
-            });
-
-            await salvarFavoritoPragmatic(numerosBase);
-        }
-
-        async function salvarFavoritoPragmatic(numerosBase) {
-            const sessionId = window.PRAGMATIC_SESSION_ID;
-            const ck = window.PRAGMATIC_CK;
-
-            if (!sessionId || !ck) {
-                console.warn('[Favoritos] SessionID ou ck não definidos. Configure PRAGMATIC_SESSION_ID e PRAGMATIC_CK.');
-                setFavoritoStatus('Não foi possível salvar favorito (sessão não configurada).', 'warn');
-                return;
-            }
-
-            if (!Array.isArray(numerosBase) || numerosBase.length === 0) {
-                setFavoritoStatus('Nenhum número para salvar como favorito.', 'warn');
-                return;
-            }
-
-            const numerosConvertidos = [];
-            for (const n of numerosBase) {
-                const mapped = mapNumeroPragmatic(n);
-                if (mapped === null) continue;
-                numerosConvertidos.push(mapped);
-            }
-
-            if (!numerosConvertidos.length) {
-                setFavoritoStatus('Nenhum número válido para salvar como favorito.', 'warn');
-                return;
-            }
-
-            const stake = PRAGMATIC_FAV_CONFIG.stakePorNumero;
-            const numerosStr = numerosConvertidos
-                .map((n) => `${n}-${stake}`)
-                .join(',');
-
-            pragmaticFavCounter = (pragmaticFavCounter || 0) + 1;
-            const nomeBet = `${PRAGMATIC_FAV_CONFIG.nomeBase} ${pragmaticFavCounter}`;
-            const nomeEncoded = encodeURIComponent(nomeBet);
-            const favId = `fav-${Date.now()}`;
-
-            const fav1 = `${nomeEncoded}/${numerosStr}/false/${favId}`;
-
-            const payload = {
-                fav1,
-                fav2: "null",
-                fav3: "null",
-                fav4: "null",
-                fav5: "null",
-                fav6: "null",
-                fav7: "null",
-                fav8: "null",
-                fav9: "null",
-                fav10: "null",
-                gameType: PRAGMATIC_FAV_CONFIG.gameType
-            };
-
-            const url = 'https://games.pragmaticplaylive.net/api/ui/savePlayerConfigGeneric'
-                + '?JSESSIONID=' + encodeURIComponent(sessionId)
-                + '&ck=' + encodeURIComponent(ck);
-
-            try {
-                setFavoritoStatus('Salvando aposta nos favoritos...', 'info');
-
-                const res = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!res.ok) {
-                    console.error('[Favoritos] Erro ao salvar favorito', res.status, await res.text());
-                    setFavoritoStatus('Erro ao salvar aposta nos favoritos.', 'error');
-                    return;
-                }
-
-                setFavoritoStatus('Aposta salva nos favoritos da mesa.', 'success');
-            } catch (err) {
-                console.error('[Favoritos] Erro inesperado ao salvar favorito', err);
-                setFavoritoStatus('Erro inesperado ao salvar favorito.', 'error');
-            }
-        }
+        // ==========================================
+        // GERAR NOVA ANÁLISE VIA API (SEM RELOAD)
+        // ==========================================
 
         async function gerarNovaAnalise() {
             const btn = document.getElementById('btn-gerar-analise');
@@ -1317,8 +1241,6 @@
                 btn.disabled = true;
                 btn.innerHTML = '<span>⚡</span><span>Gerando análise...</span>';
             }
-
-            setFavoritoStatus('', 'info');
 
             const config = carregarConfiguracoes();
             const params = new URLSearchParams({
@@ -1370,12 +1292,6 @@
                 currentAnalise = data;
                 salvarNoHistorico(currentAnalise);
                 renderLiveSugestao(currentAnalise);
-
-                try {
-                    await salvarFavoritoPragmaticFromAnalise(currentAnalise);
-                } catch (favErr) {
-                    console.warn('[Ao vivo] Erro ao salvar favorito a partir da análise', favErr);
-                }
             } catch (err) {
                 console.error('[Ao vivo] Erro em gerarNovaAnalise', err);
                 alert('Erro ao gerar nova análise.');
@@ -1400,187 +1316,113 @@
                 aovivoContent.classList.add('hidden');
             }
 
-            if (tab === 'sugestao') {
-                document.getElementById('content-sugestao').classList.remove('hidden');
-            } else if (tab === 'config') {
-                document.getElementById('content-config').classList.remove('hidden');
-            } else if (tab === 'historico') {
-                document.getElementById('content-historico').classList.remove('hidden');
-            } else if (tab === 'aovivo' && aovivoContent) {
-                aovivoContent.classList.remove('hidden');
+            document.getElementById('tab-sugestao').classList.remove('tab-active');
+            document.getElementById('tab-config').classList.remove('tab-active');
+            document.getElementById('tab-historico').classList.remove('tab-active');
+            const aovivoTab = document.getElementById('tab-aovivo');
+            if (aovivoTab) {
+                aovivoTab.classList.remove('tab-active');
+            }
+            
+            document.getElementById('tab-sugestao').classList.add('text-gray-400');
+            document.getElementById('tab-config').classList.add('text-gray-400');
+            document.getElementById('tab-historico').classList.add('text-gray-400');
+            if (aovivoTab) {
+                aovivoTab.classList.add('text-gray-400');
             }
 
-            document.querySelectorAll('.tab-btn').forEach((btn) => {
-                btn.classList.remove(
-                    'border-blue-400',
-                    'text-blue-300'
-                );
-                btn.classList.add(
-                    'border-transparent',
-                    'text-slate-300'
-                );
+            const contentEl = document.getElementById('content-' + tab);
+            const tabEl = document.getElementById('tab-' + tab);
+            if (contentEl) {
+                contentEl.classList.remove('hidden');
+            }
+            if (tabEl) {
+                tabEl.classList.add('tab-active');
+                tabEl.classList.remove('text-gray-400');
+            }
+
+            if (tab === 'historico') {
+                exibirHistorico();
+            } else if (tab === 'aovivo') {
+                verifyBookmakerLogin();
+            }
+        }
+
+        // ==========================================
+        // ATUALIZAÇÃO DE SUGESTÃO (RELOAD)
+        // ==========================================
+
+        function atualizarSugestao() {
+            const config = carregarConfiguracoes();
+            const params = new URLSearchParams({
+                quantidade: config.quantidade,
+                incluir_protecoes: config.incluir_protecoes,
+                max_protecoes: config.max_protecoes,
+                incluir_zero: config.incluir_zero,
+                limite_historico: config.limite_historico,
+                w_estelar: config.w_estelar,
+                w_chain: config.w_chain,
+                w_temporal: config.w_temporal,
+                w_quente: config.w_quente
             });
 
-            const activeBtn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
-            if (activeBtn) {
-                activeBtn.classList.remove(
-                    'border-transparent',
-                    'text-slate-300'
-                );
-                activeBtn.classList.add(
-                    'border-blue-400',
-                    'text-blue-300'
-                );
+            if (!Number.isNaN(config.minute_offset)) {
+                params.append('minute_offset', config.minute_offset);
             }
+            if (config.interval_minutes) {
+                params.append('interval_minutes', config.interval_minutes);
+            }
+            if (config.days_back) {
+                params.append('days_back', config.days_back);
+            }
+
+            const url = window.location.pathname + '?' + params.toString();
+            window.location.href = url;
         }
 
         // ==========================================
-        // AO VIVO - CONEXÃO COM EXTENSÃO (SIMPLIFICADO)
+        // INICIALIZAÇÃO
         // ==========================================
 
-        function atualizarStatusAoVivo(mensagem) {
-            const span = document.getElementById('live-status');
-            if (span) span.textContent = mensagem;
-        }
+        window.addEventListener('load', () => {
+            const config = carregarConfiguracoes();
+            preencherFormulario(config);
+            atualizarSomaPesos();
+            
+            const dadosAtuais = {{ dados | tojson | safe }};
+            let currentAnalise = dadosAtuais;
 
-        function atualizarUltimoNumero(n) {
-            const span = document.getElementById('live-last-number');
-            if (span) span.textContent = `Último número: ${n}`;
-        }
+            salvarNoHistorico(currentAnalise);
+            renderLiveSugestao(currentAnalise);
 
-        function atualizarMesaLabel(slug) {
-            const span = document.getElementById('live-roulette-label');
-            if (!span) return;
-            const uid = ROULETTE_UID_MAP[slug] || '-';
-            span.textContent = `Mesa: ${slug} (UID: ${uid})`;
-        }
+            initAoVivo();
 
-        function salvarNoHistorico(analiseData) {
-            const agora = new Date();
-            const dataHora = agora.toLocaleString('pt-BR', {
-                dateStyle: 'short',
-                timeStyle: 'short'
-            });
+            showTab('sugestao');
+        });
+    </script>
+    <script>
+        // --- TESTE DE APOSTA VIA WEBSOCKET (via iframe + extensão) ---
 
-            const principais = (analiseData.sugestoes && analiseData.sugestoes.principais) || [];
-            const protecoes  = (analiseData.sugestoes && analiseData.sugestoes.protecoes) || [];
-            const ultimos    = (analiseData.analise && analiseData.analise.ultimos_10) || [];
+        // Lê os números da sugestão atual na aba Ao vivo (divs com data-numero)
+        function getCurrentSuggestionNumbers() {
+            const principaisContainer = document.getElementById('live-sugestao-principais');
+            if (!principaisContainer) return [];
 
-            adicionarHistorico({
-                dataHora,
-                numeros: ultimos.map((n) => (n.numero !== undefined ? n.numero : n)),
-                principais: principais.map((p) => (p.numero !== undefined ? p.numero : p)),
-                protecoes: protecoes.map((p) => (p.numero !== undefined ? p.numero : p)),
-                rouletteSlug: CURRENT_ROULETTE_SLUG
-            });
+            const elementos = principaisContainer.querySelectorAll('[data-numero]');
+            const numeros = [];
 
-            renderHistorico();
-        }
-
-        // ==========================================
-        // AO VIVO - SIMULAÇÃO DE INTEGRAÇÃO COM EXTENSÃO
-        // ==========================================
-
-        function initAoVivo() {
-            const btnLogin = document.getElementById('btn-live-login');
-            const btnLogout = document.getElementById('btn-live-logout');
-            const btnGerar = document.getElementById('btn-gerar-analise');
-
-            const loginSection = document.getElementById('live-login-section');
-            const loggedSection = document.getElementById('live-logged-section');
-
-            if (btnLogin) {
-                btnLogin.addEventListener('click', () => {
-                    const tokenEl = document.getElementById('live-token');
-                    const token = tokenEl ? tokenEl.value.trim() : '';
-
-                    if (!token) {
-                        alert('Informe o token fornecido pela extensão.');
-                        return;
-                    }
-
-                    liveIsLogged = true;
-                    atualizarStatusAoVivo('Conectado à extensão.');
-                    if (loginSection) loginSection.classList.add('hidden');
-                    if (loggedSection) loggedSection.classList.remove('hidden');
-
-                    atualizarMesaLabel(CURRENT_ROULETTE_SLUG);
-                });
-            }
-
-            if (btnLogout) {
-                btnLogout.addEventListener('click', () => {
-                    liveIsLogged = false;
-                    atualizarStatusAoVivo('Aguardando...');
-                    if (loggedSection) loggedSection.classList.add('hidden');
-                    if (loginSection) loginSection.classList.remove('hidden');
-                });
-            }
-
-            if (btnGerar) {
-                btnGerar.addEventListener('click', () => {
-                    if (!liveIsLogged) {
-                        alert('Você precisa estar conectado à extensão para gerar a análise ao vivo.');
-                        return;
-                    }
-                    gerarNovaAnalise();
-                });
-            }
-        }
-
-        // ==========================================
-        // EXECUTAR APOSTA VIA EXTENSÃO (WEBSOCKET)
-        // ==========================================
-
-        function obterSugestaoAtual() {
-            if (!currentAnalise || !currentAnalise.sugestoes) {
-                return {
-                    principais: [],
-                    protecoes: []
-                };
-            }
-
-            const principais = currentAnalise.sugestoes.principais || [];
-            const protecoes = currentAnalise.sugestoes.protecoes || [];
-
-            const mapNumero = (s) => (s && typeof s === 'object' && 'numero' in s ? s.numero : s);
-
-            return {
-                principais: principais.map(mapNumero),
-                protecoes: protecoes.map(mapNumero)
-            };
-        }
-
-        function montarPayloadAposta() {
-            const sugestao = obterSugestaoAtual();
-            const principais = sugestao.principais;
-            const protecoes = sugestao.protecoes;
-
-            if (!principais.length) {
-                return null;
-            }
-
-            const todosNumeros = [...principais];
-            protecoes.forEach((n) => {
-                if (!todosNumeros.includes(n)) {
-                    todosNumeros.push(n);
+            elementos.forEach(el => {
+                const raw = el.getAttribute('data-numero');
+                const n = parseInt(raw, 10);
+                if (!Number.isNaN(n)) {
+                    numeros.push(n);
                 }
             });
 
-            const stakePorNumero = 0.5;
-
-            const numerosFormatados = todosNumeros.map((n) => ({
-                number: n,
-                stake: stakePorNumero
-            }));
-
-            return {
-                rouletteSlug: CURRENT_ROULETTE_SLUG,
-                stakePorNumero,
-                numeros: numerosFormatados
-            };
+            return numeros;
         }
 
+        // Atualiza a mensagenzinha de status abaixo do botão "Executar aposta"
         function setWsBetStatus(message, type = 'info') {
             const statusEl = document.getElementById('ws-aposta-status');
             if (!statusEl) return;
@@ -1594,80 +1436,51 @@
             statusEl.textContent = message;
         }
 
-        function executarApostaViaIframe() {
-            if (!liveIsLogged) {
-                alert('Você precisa estar conectado à extensão (Ao vivo) para executar a aposta.');
+        // Envia o comando de aposta para o iframe, que a extensão intercepta e envia pelo WebSocket já aberto
+        function executarApostaViaIframe() { 
+            const numeros = getCurrentSuggestionNumbers();
+            if (!numeros.length) {
+                setWsBetStatus('Nenhum número de sugestão encontrado para montar a aposta.', 'warn');
                 return;
             }
 
-            const payload = montarPayloadAposta();
-
-            if (!payload || !payload.numeros || !payload.numeros.length) {
-                alert('Não há sugestão atual para apostar.');
+            const iframe = document.getElementById('live-iframe');
+            if (!iframe || !iframe.contentWindow) {
+                setWsBetStatus('Iframe da mesa não encontrado ou ainda não carregado.', 'error');
                 return;
             }
 
-            setWsBetStatus('Enviando comando de aposta para a extensão...', 'info');
+            const payload = {
+                action: 'place_bet',
+                origin: 'revesbot_frontend',
+                roulette_id: "{{ dados.roulette_id }}",
+                numbers: numeros
+            };
 
             try {
-                const message = {
-                    type: 'RB_PLACE_BET',
-                    data: payload
-                };
-
-                window.postMessage(message, '*');
-
-                console.log('[RevesBot] Comando RB_PLACE_BET enviado:', message);
-
-                setWsBetStatus('Comando de aposta enviado para a extensão. Verifique a mesa.', 'success');
+                iframe.contentWindow.postMessage(
+                    {
+                        type: 'RB_PLACE_BET',
+                        payload
+                    },
+                    '*'
+                );
+                console.log('[RevesBot] RB_PLACE_BET enviado para iframe:', payload);
+                setWsBetStatus('Comando de aposta enviado para a mesa. Veja o console da mesa/extensão.', 'success');
             } catch (err) {
                 console.error('[RevesBot] Erro ao enviar RB_PLACE_BET:', err);
                 setWsBetStatus('Erro ao enviar comando de aposta para a mesa.', 'error');
             }
         }
         
+        // Bind do botão após o DOM estar pronto
         document.addEventListener('DOMContentLoaded', () => {
-            aplicarConfiguracoesNosInputs();
-            renderHistorico();
-
-            showTab('sugestao');
-
-            document.getElementById('tab-sugestao').addEventListener('click', () => showTab('sugestao'));
-            document.getElementById('tab-config').addEventListener('click', () => showTab('config'));
-            document.getElementById('tab-historico').addEventListener('click', () => showTab('historico'));
-            document.getElementById('tab-aovivo').addEventListener('click', () => showTab('aovivo'));
-
-            document.getElementById('btn-analisar').addEventListener('click', executarAnaliseLocal);
-
-            document.getElementById('config-quantidade').addEventListener('change', lerConfiguracoesDosInputs);
-            document.getElementById('config-limite-historico').addEventListener('change', lerConfiguracoesDosInputs);
-            document.getElementById('config-incluir-protecoes').addEventListener('change', lerConfiguracoesDosInputs);
-            document.getElementById('config-max-protecoes').addEventListener('change', lerConfiguracoesDosInputs);
-            document.getElementById('config-incluir-zero').addEventListener('change', lerConfiguracoesDosInputs);
-            document.getElementById('config-w-estelar').addEventListener('change', lerConfiguracoesDosInputs);
-            document.getElementById('config-w-chain').addEventListener('change', lerConfiguracoesDosInputs);
-            document.getElementById('config-w-temporal').addEventListener('change', lerConfiguracoesDosInputs);
-            document.getElementById('config-w-quente').addEventListener('change', lerConfiguracoesDosInputs);
-            document.getElementById('config-minute-offset').addEventListener('change', lerConfiguracoesDosInputs);
-            document.getElementById('config-interval-minutes').addEventListener('change', lerConfiguracoesDosInputs);
-            document.getElementById('config-days-back').addEventListener('change', lerConfiguracoesDosInputs);
-
-            const btnLimparHistorico = document.getElementById('btn-limpar-historico');
-            if (btnLimparHistorico) {
-                btnLimparHistorico.addEventListener('click', () => {
-                    if (confirm('Tem certeza que deseja limpar o histórico de análises?')) {
-                        limparHistorico();
-                    }
-                });
-            }
-
-            initAoVivo();
-
             const btnExec = document.getElementById('btn-executar-aposta');
             if (btnExec) {
                 btnExec.addEventListener('click', executarApostaViaIframe);
             }
         });
     </script>
+    
 </body>
 </html>
