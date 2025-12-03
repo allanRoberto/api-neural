@@ -184,7 +184,7 @@
                             <p class="text-xs text-gray-500 mt-1">Análise por horário</p>
                         </div>
 
-                        <!-- Peso COMPORTAMENTAL -->
+                        <!-- Peso TEMPORAL -->
                         <div>
                             <label class="text-gray-300 text-sm block mb-2">
                                 🔃 Peso COMPORTAMENTAL
@@ -363,7 +363,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     
                     <!-- Total -->
-                    {% if dados.analise.consenso.consenso_5 %}
+                    {% if dados.analise.consenso.consenso_5|length > 0 %}
                     <div class="consenso-total rounded-xl p-4 shadow-lg">
                         <div class="flex items-center gap-2 mb-2">
                             <span class="text-2xl">🌟</span>
@@ -385,8 +385,10 @@
                             <h3 class="text-white font-bold">Quadruplo (4 padrões)</h3>
                         </div>
                         <div class="flex flex-wrap gap-2 mt-3">
-                            {% for num in dados.analise.consenso.consenso_4 %}
-                            <span class="bg-white/20 text-white px-3 py-1 rounded-full font-bold">{{ num }}</span>
+                            {% for tipo, numeros in dados.analise.consenso.consenso_4.items() %}
+                                {% for num in numeros %}
+                                <span class="bg-white/20 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
+                                {% endfor %}
                             {% endfor %}
                         </div>
                     </div>
@@ -399,8 +401,10 @@
                             <h3 class="text-white font-bold">Triplo (3 padrões)</h3>
                         </div>
                         <div class="flex flex-wrap gap-2 mt-3">
-                            {% for num in dados.analise.consenso.consenso_3 %}
-                            <span class="bg-white/20 text-white px-3 py-1 rounded-full font-bold">{{ num }}</span>
+                            {% for tipo, numeros in dados.analise.consenso.consenso_3.items() %}
+                                {% for num in numeros %}
+                                <span class="bg-white/20 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
+                                {% endfor %}
                             {% endfor %}
                         </div>
                     </div>
@@ -413,8 +417,10 @@
                             <h3 class="text-white font-bold">Duplo (2 padrões)</h3>
                         </div>
                         <div class="flex flex-wrap gap-2 mt-3">
-                            {% for num in dados.analise.consenso.consenso_2 %}
-                            <span class="bg-white/20 text-white px-3 py-1 rounded-full font-bold">{{ num }}</span>
+                            {% for tipo, numeros in dados.analise.consenso.consenso_2.items() %}
+                                {% for num in numeros %}
+                                <span class="bg-white/20 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
+                                {% endfor %}
                             {% endfor %}
                         </div>
                     </div>
@@ -444,7 +450,7 @@
                     </div>
 
 
-                    <!-- COMPORTAMENTAL -->
+                    <!-- ESTELAR -->
                     <div class="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
                         <h3 class="text-lg font-bold text-orange-400 mb-3">🔄 Comportamental</h3>
                         <div class="flex flex-wrap gap-2">
@@ -583,23 +589,6 @@
             <div class="flex flex-col lg:flex-row gap-6">
                 <!-- Coluna esquerda: login e controles -->
                 <div class="w-full lg:w-1/4 space-y-4">
-                    <!-- Gerar nova análise -->
-                    <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4 space-y-3">
-                        <h3 class="text-sm font-semibold text-white mb-1">⚡ Gerar nova análise</h3>
-                        <button
-                            id="btn-gerar-analise"
-                            type="button"
-                            class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-2"
-                        >
-                            <span>⚡</span>
-                            <span>Gerar nova análise</span>
-                        </button>
-                        <!-- Mensagem de status ao salvar favoritos -->
-                        <div
-                            id="fav-save-status"
-                            class="mt-2 text-[11px] min-h-[1.25rem] text-gray-400"
-                        ></div>
-                    </div>
                     <!-- Números atuais da sugestão -->
                     <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4 space-y-3">
                         <h3 class="text-sm font-semibold text-white mb-1">🎲 Números desta sugestão</h3>    
@@ -608,7 +597,7 @@
                             <div id="live-sugestao-principais" class="flex flex-wrap gap-1">
                                 {% if dados.sugestoes.principais|length > 0 %}
                                     {% for sugestao in dados.sugestoes.principais %}
-                                    <div class="bg-blue-600 text-white w-5 h-5 px-4 py-2 rounded-full flex items-center justify-center text-xs font-semibold" data-numero="{{ sugestao.numero }}">
+                                    <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold" data-numero="{{ sugestao.numero }}">
                                         {{ sugestao.numero }}
                                     </div>
                                     {% endfor %}
@@ -641,73 +630,28 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Consenso -->
+                    <!-- Gerar nova análise -->
                     <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4 space-y-3">
-                        <h2 class="text-xl font-bold text-white mb-4">🤝 Consenso entre Padrões</h2>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
-                            
-                            <!-- Total -->
-                            {% if dados.analise.consenso.consenso_5 %}
-                            <div class="consenso-total rounded-xl p-4 shadow-lg">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <span class="text-2xl">🌟</span>
-                                    <h3 class="text-white font-bold">Total (todos os padrões)</h3>
-                                </div>
-                                <div class="flex flex-wrap gap-2 mt-3">
-                                    {% for num in dados.analise.consenso.consenso_5 %}
-                                    <span class="bg-white/20 text-white px-3 py-1 rounded-full font-bold">{{ num }}</span>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            {% endif %}
-                        
-
-                            {% if dados.analise.consenso.consenso_4 %}
-                            <div class="consenso-duplo rounded-xl p-4 shadow-lg">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <span class="text-2xl">🔹</span>
-                                    <h3 class="text-white font-bold">Quadruplo (4 padrões)</h3>
-                                </div>
-                                <div class="flex flex-wrap gap-2 mt-3">
-                                    {% for num in dados.analise.consenso.consenso_4 %}
-                                    <span class="bg-white/20 text-white px-3 py-1 rounded-full font-bold">{{ num }}</span>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            {% endif %}
-
-                            {% if dados.analise.consenso.consenso_3 %}
-                            <div class="consenso-duplo rounded-xl p-4 shadow-lg">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <span class="text-2xl">🔹</span>
-                                    <h3 class="text-white font-bold">Triplo (3 padrões)</h3>
-                                </div>
-                                <div class="flex flex-wrap gap-2 mt-3">
-                                    {% for num in dados.analise.consenso.consenso_3 %}
-                                    <span class="bg-white/20 text-white px-3 py-1 rounded-full font-bold">{{ num }}</span>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            {% endif %}
-
-                            {% if dados.analise.consenso.consenso_2 %}
-                            <div class="consenso-duplo rounded-xl p-4 shadow-lg">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <span class="text-2xl">🔹</span>
-                                    <h3 class="text-white font-bold">Duplo (2 padrões)</h3>
-                                </div>
-                                <div class="flex flex-wrap gap-2 mt-3">
-                                    {% for num in dados.analise.consenso.consenso_2 %}
-                                    <span class="bg-white/20 text-white px-3 py-1 rounded-full font-bold">{{ num }}</span>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            {% endif %}
-                        </div>
+                        <h3 class="text-sm font-semibold text-white mb-1">⚡ Gerar nova análise</h3>
+                        <p class="text-xs text-gray-400 mb-2">
+                            Gere uma nova análise para esta mesa.
+                        </p>
+                        <button
+                            id="btn-gerar-analise"
+                            type="button"
+                            class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-2"
+                        >
+                            <span>⚡</span>
+                            <span>Gerar nova análise</span>
+                        </button>
+                        <!-- Mensagem de status ao salvar favoritos -->
+                        <div
+                            id="fav-save-status"
+                            class="mt-2 text-[11px] min-h-[1.25rem] text-gray-400"
+                        ></div>
                     </div>
-
-                    <!-- Executar aposta via extensão -->
+                    <!-- Teste de aposta via WebSocket -->
+                    <!-- Executar aposta via extensão (usa WebSocket já aberto da mesa) -->
                     <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4 space-y-3">
                         <div class="flex items-center justify-between mb-1">
                             <h3 class="text-sm font-semibold text-white">⚡ Executar aposta</h3>
@@ -729,17 +673,18 @@
                             class="mt-2 text-[11px] text-gray-400 min-h-[1.25rem]"
                         ></div>
                     </div>
-
-                    <!-- Login + status da sessão WS -->
                     <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4">
                         
                         <div class="flex items-center justify-between mb-2">
                             <h2 class="text-lg font-bold text-white">🎥 Ao vivo</h2>
-                            <span id="live-status" class="text-xs text-gray-400">Aguardando login...</span>
+                            <span id="live-status" class="text-xs text-gray-400">Aguardando...</span>
                         </div>
-                        
+
                         <!-- Seção de login -->
                         <div id="live-login-section" class="space-y-3">
+                            <p class="text-xs text-gray-400">
+                                Faça login na casa de apostas para assistir a roleta dentro do painel.
+                            </p>
                             <form id="live-login-form" class="space-y-3">
                                 <div>
                                     <label for="live-email" class="block text-xs text-gray-300 mb-1">E-mail</label>
@@ -766,7 +711,7 @@
                                     type="submit"
                                     class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-2 rounded-lg text-sm transition-all"
                                 >
-                                    🔐 Entrar
+                                    🔐 Entrar na casa de apostas
                                 </button>
                             </form>
                         </div>
@@ -775,12 +720,9 @@
                         <div id="live-logged-section" class="hidden mt-3 text-xs text-gray-200">
                             <div class="flex items-center justify-between mb-2">
                                 <div>
-                                    <p class="text-green-400 font-semibold">✅ Autenticado (bot local)</p>
+                                    <p class="text-green-400 font-semibold">✅ Autenticado</p>
                                     <p class="text-gray-300">
                                         Usuário: <span id="live-user-info" class="font-semibold"></span>
-                                    </p>
-                                    <p class="text-gray-400 mt-1">
-                                        Sessão WS: <span id="live-ws-status" class="text-amber-300">desconectada</span>
                                     </p>
                                 </div>
                                 <button
@@ -793,15 +735,19 @@
                             </div>
                         </div>
                     </div>
+
+                    
+
+                    
                 </div>
 
-                <!-- Coluna direita: iframe (placeholder, depois podemos trocar) -->
+                <!-- Coluna direita: iframe -->
                 <div class="w-full lg:w-3/4">
                     <div class="relative rounded-xl border border-gray-700 overflow-hidden bg-black">
                         <div class="absolute inset-0 flex items-center justify-center pointer-events-none" id="live-iframe-placeholder">
                             <p class="text-gray-500 text-sm text-center px-4">
-                                Neste momento o vídeo da roleta não está integrado pelo backend local.
-                                Você já pode monitorar os eventos da mesa via WebSocket assim que fizer login.
+                                Aguardando login e carregamento do jogo.<br>
+                                Após autenticar, o vídeo será carregado automaticamente para esta mesa.
                             </p>
                         </div>
                         <iframe
@@ -835,15 +781,11 @@
         // ==========================================
         // CONSTANTES
         // ==========================================
-
+        
         const CONFIG_KEY = 'analizer_config';
         const HISTORICO_KEY = 'analizer_historico';
 
-        // Backend local (0.0.0.0 / 192.168.x.x) onde está rodando o bot_aposta.js
-        // Ajuste host/porta conforme seu ambiente (ex: http://192.168.0.1:4051)
-        const   BACKEND_HTTP_BASE = 'https://auth.revesbot.com.br';
-        const STATUS_WS_URL     = 'ws://auth.revesbot.com.br';
-
+        const API_BASE = 'https://auth.revesbot.com.br';
         const CURRENT_ROULETTE_SLUG = "{{ dados.roulette_id }}";
         const ROULETTE_SLUG_TO_GAME_ID = {
             "pragmatic-korean-roulette": "457",
@@ -861,16 +803,12 @@
 
         const SUGESTAO_JSON_URL = '/api/sugestao/' + CURRENT_ROULETTE_SLUG;
 
-        // URL de salvar favoritos (pragmatic). Mantido como antes.
+        // URL de salvar favoritos (JSESSIONID fixo por enquanto; depois ajustamos para dinâmico)
         const PRAGMATIC_SAVE_FAV_URL =
             'https://games.pragmaticplaylive.net/api/ui/savePlayerConfigGeneric?JSESSIONID=VlzZwclAPymy8vrrFkhxYkrVbY6EwcT47Sz1gpzanS_csb-4BrgI!771017254-462b2fde&ck=1764589999483';
 
         let liveIsLogged = false;
         let currentAnalise = null;
-
-        // Sessão com o backend local
-        let backendSessionToken = null;  // token retornado por /api/login
-        let statusSocket = null;         // WebSocket para /ws/status do bot
 
         // ==========================================
         // CONFIGURAÇÕES - LOCALSTORAGE
@@ -1066,7 +1004,7 @@
         }
 
         // ==========================================
-        // AO VIVO - LOGIN + STATUS WEBSOCKET
+        // AO VIVO - LOGIN + IFRAME
         // ==========================================
 
         function getCurrentGameIdFromSlug() {
@@ -1084,19 +1022,6 @@
             else if (type === 'danger') colorClass = 'text-red-400';
 
             el.className = 'text-xs ' + colorClass;
-            el.textContent = message;
-        }
-
-        function liveSetWsStatus(message, type = 'info') {
-            const el = document.getElementById('live-ws-status');
-            if (!el) return;
-
-            let colorClass = 'text-gray-300';
-            if (type === 'success') colorClass = 'text-green-400';
-            else if (type === 'warning') colorClass = 'text-yellow-400';
-            else if (type === 'danger') colorClass = 'text-red-400';
-
-            el.className = colorClass;
             el.textContent = message;
         }
 
@@ -1122,154 +1047,40 @@
             }
         }
 
-        function handleStatusMessage(data) {
-            if (!data || typeof data !== 'object') return;
-
-            switch (data.type) {
-                case 'status_init':
-                    liveSetWsStatus(data.isLoggedIn ? 'conectada' : 'desconectada', data.isLoggedIn ? 'success' : 'warning');
-                    liveSetStatus('Sessão carregada. Aguardando eventos da mesa...', 'info');
-                    break;
-
-                case 'session_starting':
-                    liveSetWsStatus('iniciando sessão...', 'info');
-                    liveSetStatus(`Conectando na mesa ${data.slug || ''} (gameId=${data.gameId || '?'})...`, 'info');
-                    break;
-
-                case 'session_ready':
-                    liveSetWsStatus('sessão pronta', 'success');
-                    liveSetStatus('Sessão pronta, conectando no WebSocket da mesa...', 'success');
-                    break;
-
-                case 'session_connected':
-                    liveSetWsStatus('conectada', 'success');
-                    liveSetStatus('Conectado ao WebSocket da mesa. Monitorando...', 'success');
-                    break;
-
-                case 'session_disconnected':
-                    liveSetWsStatus('desconectada', 'warning');
-                    liveSetStatus('Sessão da mesa foi desconectada.', 'warning');
-                    break;
-
-                case 'session_error':
-                    liveSetWsStatus('erro na sessão', 'danger');
-                    liveSetStatus(data.message || 'Erro na sessão da mesa.', 'danger');
-                    break;
-
-                case 'bets_open':
-                    liveSetStatus('Apostas ABERTAS na mesa.', 'success');
-                    break;
-
-                case 'bets_closing_soon':
-                    liveSetStatus('Apostas ENCERRANDO...', 'warning');
-                    break;
-
-                case 'bets_closed':
-                    liveSetStatus('Apostas FECHADAS.', 'warning');
-                    break;
-
-                case 'round_result':
-                    liveSetStatus(`Número sorteado: ${data.number}`, 'info');
-                    // Atualiza mini-histórico na aba Ao vivo
-                    const ultimosEl = document.getElementById('live-sugestao-ultimos-numeros');
-                    if (ultimosEl) {
-                        const span = document.createElement('span');
-                        span.className = 'bg-gray-600 text-white px-4 py-2 rounded-lg font-bold';
-                        span.textContent = data.number;
-                        ultimosEl.prepend(span);
-                        while (ultimosEl.children.length > 10) {
-                            ultimosEl.removeChild(ultimosEl.lastChild);
-                        }
-                    }
-                    break;
-
-                default:
-                    console.log('[Ao vivo] Evento WS não tratado:', data);
-                    break;
-            }
-        }
-
-        function connectStatusWebSocketAndInitSession() {
-            if (!backendSessionToken) {
-                liveSetStatus('Faça login primeiro para iniciar a sessão da mesa.', 'warning');
-                return;
-            }
-
-            const slug   = CURRENT_ROULETTE_SLUG;
-            const gameId = getCurrentGameIdFromSlug();
-            const rouletteId = CURRENT_ROULETTE_SLUG;
-
-            if (!slug || !gameId) {
-                liveSetStatus('Slug ou gameId não definidos para esta mesa.', 'warning');
-                return;
-            }
-
-            const sendInit = () => {
-                if (!statusSocket || statusSocket.readyState !== WebSocket.OPEN) return;
-                const payload = {
-                    type: 'init_session',
-                    token: backendSessionToken,
-                    slug,
-                    gameId,
-                    rouletteId
-                };
-                statusSocket.send(JSON.stringify(payload));
-                console.log('[Ao vivo] init_session enviado:', payload);
-            };
-
-            if (statusSocket && statusSocket.readyState === WebSocket.OPEN) {
-                sendInit();
-                return;
-            }
-
-            if (statusSocket && statusSocket.readyState === WebSocket.CONNECTING) {
-                console.log('[Ao vivo] WS já está conectando, aguarde...');
-                return;
-            }
-
-            if (statusSocket) {
-                try { statusSocket.close(); } catch (e) {}
-                statusSocket = null;
-            }
-
+        async function verifyBookmakerLogin() {
             try {
-                statusSocket = new WebSocket(STATUS_WS_URL);
+                liveSetStatus('Verificando sessão na casa de apostas...', 'info');
 
-                statusSocket.onopen = () => {
-                    console.log('[Ao vivo] WS status conectado.');
-                    liveSetWsStatus('conectada', 'success');
-                    liveSetStatus('Conectado ao servidor local. Iniciando sessão da mesa...', 'info');
-                    sendInit();
-                };
-
-                statusSocket.onmessage = (event) => {
-                    try {
-                        const data = JSON.parse(event.data);
-                        handleStatusMessage(data);
-                    } catch (err) {
-                        console.warn('[Ao vivo] Mensagem WS inválida:', event.data);
+                const res = await fetch(`${API_BASE}/api/bookmaker/verify`, {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: {
+                        'Accept': 'application/json'
                     }
-                };
+                });
 
-                statusSocket.onclose = (event) => {
-                    console.log('[Ao vivo] WS status fechado:', event.code, event.reason);
-                    liveSetWsStatus('desconectada', 'warning');
-                    if (!backendSessionToken) {
-                        liveSetStatus('Sessão WS encerrada (sem login).', 'warning');
-                    } else {
-                        liveSetStatus('Sessão WS encerrada. Você pode reconectar clicando em Gerar nova sessão depois.', 'warning');
+                const data = await res.json();
+
+                if (data.isConnected) {
+                    const user = data.user || {};
+                    const name = user.name || user.email || 'Usuário';
+                    liveSetStatus('Autenticado como ' + name, 'success');
+                    liveToggleLoggedUI(true, name);
+
+                    const autoGameId = getCurrentGameIdFromSlug();
+                    if (autoGameId) {
+                        setTimeout(() => {
+                            startLiveGame();
+                        }, 300);
                     }
-                };
-
-                statusSocket.onerror = (err) => {
-                    console.error('[Ao vivo] Erro no WS status:', err);
-                    liveSetWsStatus('erro', 'danger');
-                    liveSetStatus('Erro ao conectar no WS de status.', 'danger');
-                };
+                } else {
+                    liveSetStatus('Você não está autenticado na casa de apostas.', 'warning');
+                    liveToggleLoggedUI(false);
+                }
             } catch (err) {
-                console.error('[Ao vivo] Erro ao abrir WS de status:', err);
-                liveSetWsStatus('erro', 'danger');
-                liveSetStatus('Erro ao abrir WebSocket de status.', 'danger');
+                console.error('[Ao vivo] Erro em verifyBookmakerLogin', err);
+                liveSetStatus('Erro ao verificar autenticação.', 'danger');
+                liveToggleLoggedUI(false);
             }
         }
 
@@ -1278,41 +1089,36 @@
             if (loginBtn) loginBtn.disabled = true;
 
             try {
-                liveSetStatus('Realizando login no backend local...', 'info');
+                liveSetStatus('Realizando login...', 'info');
 
-                const res = await fetch(`${BACKEND_HTTP_BASE}/api/auth/login`, {
+                const res = await fetch(`${API_BASE}/api/auth/login`, {
                     method: 'POST',
+                    credentials: 'include',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                         email,
-                        password,
-                        slug: CURRENT_ROULETTE_SLUG
+                        password
                     })
                 });
 
                 const data = await res.json();
 
-                if (res.ok && data.ok && data.token) {
-                    backendSessionToken = data.token;
-                    liveToggleLoggedUI(true, email);
-                    liveSetStatus('Login realizado com sucesso. Iniciando sessão da mesa...', 'success');
-                    liveSetWsStatus('conectando...', 'info');
-                    connectStatusWebSocketAndInitSession();
+                if (res.ok && data.isConnected) {
+                    liveSetStatus('Login realizado com sucesso! Validando sessão...', 'success');
+                    await verifyBookmakerLogin();
                     return true;
                 } else {
-                    const msg = data.message || data.error || 'Falha ao autenticar no backend local.';
+                    const msg = data.error || data.message || 'Falha ao autenticar na casa de apostas.';
                     liveSetStatus(msg, 'danger');
                     liveToggleLoggedUI(false);
-                    backendSessionToken = null;
                     return false;
                 }
             } catch (err) {
                 console.error('[Ao vivo] Erro em doLiveLogin', err);
-                liveSetStatus('Erro ao realizar login no backend local.', 'danger');
+                liveSetStatus('Erro ao realizar login.', 'danger');
                 liveToggleLoggedUI(false);
-                backendSessionToken = null;
                 return false;
             } finally {
                 if (loginBtn) loginBtn.disabled = false;
@@ -1329,16 +1135,51 @@
             if (placeholder) {
                 placeholder.classList.remove('hidden');
             }
+            liveSetStatus('Sessão local limpa. O cookie poderá continuar válido até expirar.', 'warning');
+            liveToggleLoggedUI(false);
+        }
 
-            if (statusSocket) {
-                try { statusSocket.close(); } catch (e) {}
-                statusSocket = null;
+        async function startLiveGame() {
+            const iframe    = document.getElementById('live-iframe');
+            const placeholder = document.getElementById('live-iframe-placeholder');
+
+            if (!iframe) return;
+
+            const gameId = getCurrentGameIdFromSlug();
+            if (!gameId) {
+                liveSetStatus('Não foi possível determinar o gameId desta mesa.', 'warning');
+                return;
             }
 
-            backendSessionToken = null;
-            liveSetStatus('Sessão local encerrada. Faça login novamente para reconectar.', 'warning');
-            liveSetWsStatus('desconectada', 'warning');
-            liveToggleLoggedUI(false);
+            try {
+                liveSetStatus('Solicitando link do jogo...', 'info');
+
+                const res = await fetch(`${API_BASE}/api/start-game/${encodeURIComponent(gameId)}`, {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const data = await res.json();
+
+                if (!res.ok || !data.success || !data.link) {
+                    const msg = data.message || 'Não foi possível iniciar o jogo.';
+                    liveSetStatus(msg, 'danger');
+                    return;
+                }
+
+                iframe.src = data.link;
+                iframe.classList.remove('hidden');
+                if (placeholder) {
+                    placeholder.classList.add('hidden');
+                }
+                liveSetStatus('Jogo iniciado.', 'success');
+            } catch (err) {
+                console.error('[Ao vivo] Erro em startLiveGame', err);
+                liveSetStatus('Erro ao iniciar jogo.', 'danger');
+            }
         }
 
         function initAoVivo() {
@@ -1392,17 +1233,22 @@
                     principaisContainer.innerHTML = '<p class="text-gray-500 text-xs">Nenhuma sugestão disponível no momento.</p>';
                 } else {
                     principaisContainer.innerHTML = principais.map(s => {
-                        const numero = s.numero !== undefined ? s.numero : s;
-                        const score = s.score !== undefined ? s.score : null;
-                        return `
-                            <div
-                                class="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-semibold p-2 px-4 py-4"
-                                data-numero="${numero}"
-                            >
-                                ${numero}
-                            </div>
-                        `;
-                    }).join('');
+                    const numero = s.numero !== undefined ? s.numero : s;
+                    const score = s.score !== undefined ? s.score : null;
+                    return `
+                        <div
+                            class="bg-blue-600 rounded-lg p-3 text-center"
+                            data-numero="${numero}"
+                        >
+                            <div class="text-xl font-bold text-white">${numero}</div>
+                            ${
+                                score !== null
+                                    ? `<div class="text-[11px] text-blue-100 mt-1">${(score * 100).toFixed(1)}%</div>`
+                                    : ''
+                            }
+                        </div>
+                    `;
+                }).join('');
                 }
             }
 
@@ -1414,7 +1260,7 @@
                     protecoesContainer.innerHTML = protecoes.map(p => {
                         const numero = p.numero !== undefined ? p.numero : p;
                         return `
-                            <div class="bg-gray-700 text-gray-200 w-7 h-7 rounded-full flex items-center justify-center text-xs" data-numero="${numero}">
+                            <div class="bg-gray-700 text-gray-200 w-7 h-7 rounded-full flex items-center justify-center text-xs">
                                 ${numero}
                             </div>
                         `;
@@ -1423,14 +1269,16 @@
             }
 
             if (ultimosNumerosContainer) {
-                const ultimosNumeros = (data.analise && data.analise.ultimos_10) || [];
+                const ultimosNumeros = (data.sugestoes && data.analise.ultimos_10) || [];
                 if (!ultimosNumeros.length) {
                     ultimosNumerosContainer.innerHTML = '';
                 } else {
                     ultimosNumerosContainer.innerHTML = ultimosNumeros.map(p => {
                         const numero = p.numero !== undefined ? p.numero : p;
                         return `
-                            <span class="bg-gray-600 text-white px-4 py-2 rounded-lg font-bold">${numero}</span>
+                            <div class="bg-gray-700 text-gray-200 w-7 h-7 rounded-full flex items-center justify-center text-xs">
+                                ${numero}
+                            </div>
                         `;
                     }).join('');
                 }
@@ -1454,6 +1302,7 @@
             statusEl.textContent = message;
         }
 
+        // 0 → 2, demais números +3, conforme padrão observado
         function mapNumeroToPragmaticFavCode(num) {
             if (num === 0) return 2;
             return num + 3;
@@ -1587,6 +1436,7 @@
                 salvarNoHistorico(currentAnalise);
                 renderLiveSugestao(currentAnalise);
 
+                // Após carregar nova análise, tenta salvar aposta nos favoritos
                 salvarApostaComoFavorito(currentAnalise);
             } catch (err) {
                 console.error('[Ao vivo] Erro em gerarNovaAnalise', err);
@@ -1640,7 +1490,7 @@
             if (tab === 'historico') {
                 exibirHistorico();
             } else if (tab === 'aovivo') {
-                liveSetStatus('Aguardando login no backend local...', 'info');
+                verifyBookmakerLogin();
             }
         }
 
@@ -1677,14 +1527,6 @@
             window.location.href = url;
         }
 
-        // Fecha o WS ao sair da página
-        window.addEventListener('beforeunload', () => {
-            if (statusSocket) {
-                try { statusSocket.close(); } catch (e) {}
-                statusSocket = null;
-            }
-        });
-
         // ==========================================
         // INICIALIZAÇÃO
         // ==========================================
@@ -1708,6 +1550,7 @@
     <script>
         // --- TESTE DE APOSTA VIA WEBSOCKET (via iframe + extensão) ---
 
+        // Lê os números da sugestão atual na aba Ao vivo (divs com data-numero)
         function getCurrentSuggestionNumbers() {
             const principaisContainer = document.getElementById('live-sugestao-principais');
             if (!principaisContainer) return [];
@@ -1726,6 +1569,7 @@
             return numeros;
         }
 
+        // Atualiza a mensagenzinha de status abaixo do botão "Executar aposta"
         function setWsBetStatus(message, type = 'info') {
             const statusEl = document.getElementById('ws-aposta-status');
             if (!statusEl) return;
@@ -1739,6 +1583,7 @@
             statusEl.textContent = message;
         }
 
+        // Envia o comando de aposta para o iframe, que a extensão intercepta e envia pelo WebSocket já aberto
         function executarApostaViaIframe() { 
             const numeros = getCurrentSuggestionNumbers();
             if (!numeros.length) {
@@ -1775,6 +1620,7 @@
             }
         }
         
+        // Bind do botão após o DOM estar pronto
         document.addEventListener('DOMContentLoaded', () => {
             const btnExec = document.getElementById('btn-executar-aposta');
             if (btnExec) {
