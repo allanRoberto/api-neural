@@ -740,10 +740,6 @@
                         
                         <!-- Seção de login -->
                         <div id="live-login-section" class="space-y-3">
-                            <p class="text-xs text-gray-400">
-                                Faça login (no backend 0.0.0.0/192.168.x.x) para que a API local se autentique na casa de apostas
-                                e inicie o WebSocket da mesa.
-                            </p>
                             <form id="live-login-form" class="space-y-3">
                                 <div>
                                     <label for="live-email" class="block text-xs text-gray-300 mb-1">E-mail</label>
@@ -845,8 +841,8 @@
 
         // Backend local (0.0.0.0 / 192.168.x.x) onde está rodando o bot_aposta.js
         // Ajuste host/porta conforme seu ambiente (ex: http://192.168.0.1:4051)
-        const BACKEND_HTTP_BASE = 'http://0.0.0.0:4051';
-        const STATUS_WS_URL     = 'ws://0.0.0.0:4050';
+        const BACKEND_HTTP_BASE = 'https://auth.revesbot.com.br';
+        const STATUS_WS_URL     = 'ws:////auth.revesbot.com.br';
 
         const CURRENT_ROULETTE_SLUG = "{{ dados.roulette_id }}";
         const ROULETTE_SLUG_TO_GAME_ID = {
