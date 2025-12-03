@@ -841,8 +841,8 @@
 
         // Backend local (0.0.0.0 / 192.168.x.x) onde está rodando o bot_aposta.js
         // Ajuste host/porta conforme seu ambiente (ex: http://192.168.0.1:4051)
-        const BACKEND_HTTP_BASE = 'https://auth.revesbot.com.br';
-        const STATUS_WS_URL     = 'ws:////auth.revesbot.com.br';
+        const   BACKEND_HTTP_BASE = 'https://auth.revesbot.com.br';
+        const STATUS_WS_URL     = 'ws://auth.revesbot.com.br';
 
         const CURRENT_ROULETTE_SLUG = "{{ dados.roulette_id }}";
         const ROULETTE_SLUG_TO_GAME_ID = {
@@ -1280,7 +1280,7 @@
             try {
                 liveSetStatus('Realizando login no backend local...', 'info');
 
-                const res = await fetch(`${BACKEND_HTTP_BASE}/auth/login`, {
+                const res = await fetch(`${BACKEND_HTTP_BASE}/api/auth/login`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
