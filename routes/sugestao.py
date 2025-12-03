@@ -371,8 +371,8 @@ def _clusterizar_por_roda(
 
 def gerar_numeros_agrupados_por_regiao(
     scores_ensemble: Dict[int, float],
-    dist_cluster: int = 1,
-    min_score: float = 0.0
+    dist_cluster: int = 2,
+    min_score: float = 2.0
 ) -> List[int]:
     """
     Gera lista de números já agrupados por região:
