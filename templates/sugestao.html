@@ -363,7 +363,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     
                     <!-- Total -->
-                    {% if dados.analise.consenso.consenso_5|length > 0 %}
+                    {% if dados.analise.consenso.consenso_5 %}
                     <div class="consenso-total rounded-xl p-4 shadow-lg">
                         <div class="flex items-center gap-2 mb-2">
                             <span class="text-2xl">🌟</span>
@@ -385,10 +385,8 @@
                             <h3 class="text-white font-bold">Quadruplo (4 padrões)</h3>
                         </div>
                         <div class="flex flex-wrap gap-2 mt-3">
-                            {% for tipo, numeros in dados.analise.consenso.consenso_4.items() %}
-                                {% for num in numeros %}
-                                <span class="bg-white/20 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
-                                {% endfor %}
+                            {% for num in dados.analise.consenso.consenso_4 %}
+                            <span class="bg-white/20 text-white px-3 py-1 rounded-full font-bold">{{ num }}</span>
                             {% endfor %}
                         </div>
                     </div>
@@ -401,10 +399,8 @@
                             <h3 class="text-white font-bold">Triplo (3 padrões)</h3>
                         </div>
                         <div class="flex flex-wrap gap-2 mt-3">
-                            {% for tipo, numeros in dados.analise.consenso.consenso_3.items() %}
-                                {% for num in numeros %}
-                                <span class="bg-white/20 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
-                                {% endfor %}
+                            {% for num in dados.analise.consenso.consenso_3 %}
+                            <span class="bg-white/20 text-white px-3 py-1 rounded-full font-bold">{{ num }}</span>
                             {% endfor %}
                         </div>
                     </div>
@@ -417,10 +413,8 @@
                             <h3 class="text-white font-bold">Duplo (2 padrões)</h3>
                         </div>
                         <div class="flex flex-wrap gap-2 mt-3">
-                            {% for tipo, numeros in dados.analise.consenso.consenso_2.items() %}
-                                {% for num in numeros %}
-                                <span class="bg-white/20 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ num }}</span>
-                                {% endfor %}
+                            {% for num in dados.analise.consenso.consenso_2 %}
+                            <span class="bg-white/20 text-white px-3 py-1 rounded-full font-bold">{{ num }}</span>
                             {% endfor %}
                         </div>
                     </div>
@@ -589,6 +583,23 @@
             <div class="flex flex-col lg:flex-row gap-6">
                 <!-- Coluna esquerda: login e controles -->
                 <div class="w-full lg:w-1/4 space-y-4">
+                    <!-- Gerar nova análise -->
+                    <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4 space-y-3">
+                        <h3 class="text-sm font-semibold text-white mb-1">⚡ Gerar nova análise</h3>
+                        <button
+                            id="btn-gerar-analise"
+                            type="button"
+                            class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-2"
+                        >
+                            <span>⚡</span>
+                            <span>Gerar nova análise</span>
+                        </button>
+                        <!-- Mensagem de status ao salvar favoritos -->
+                        <div
+                            id="fav-save-status"
+                            class="mt-2 text-[11px] min-h-[1.25rem] text-gray-400"
+                        ></div>
+                    </div>
                     <!-- Números atuais da sugestão -->
                     <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4 space-y-3">
                         <h3 class="text-sm font-semibold text-white mb-1">🎲 Números desta sugestão</h3>    
@@ -597,7 +608,7 @@
                             <div id="live-sugestao-principais" class="flex flex-wrap gap-1">
                                 {% if dados.sugestoes.principais|length > 0 %}
                                     {% for sugestao in dados.sugestoes.principais %}
-                                    <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold" data-numero="{{ sugestao.numero }}">
+                                    <div class="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-semibold" data-numero="{{ sugestao.numero }}">
                                         {{ sugestao.numero }}
                                     </div>
                                     {% endfor %}
@@ -630,26 +641,74 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Gerar nova análise -->
-                    <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4 space-y-3">
-                        <h3 class="text-sm font-semibold text-white mb-1">⚡ Gerar nova análise</h3>
-                        <p class="text-xs text-gray-400 mb-2">
-                            Gere uma nova análise para esta mesa.
-                        </p>
-                        <button
-                            id="btn-gerar-analise"
-                            type="button"
-                            class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-2"
-                        >
-                            <span>⚡</span>
-                            <span>Gerar nova análise</span>
-                        </button>
-                        <!-- Mensagem de status ao salvar favoritos -->
-                        <div
-                            id="fav-save-status"
-                            class="mt-2 text-[11px] min-h-[1.25rem] text-gray-400"
-                        ></div>
+                    
+
+                    <!-- Consenso -->
+                <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4 space-y-3">
+                <h2 class="text-xl font-bold text-white mb-4">🤝 Consenso entre Padrões</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
+                    
+                    <!-- Total -->
+                    {% if dados.analise.consenso.consenso_5 %}
+                    <div class="consenso-total rounded-xl p-4 shadow-lg">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">🌟</span>
+                            <h3 class="text-white font-bold">Total (todos os padrões)</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            {% for num in dados.analise.consenso.consenso_5 %}
+                            <span class="bg-white/20 text-white px-3 py-1 rounded-full font-bold">{{ num }}</span>
+                            {% endfor %}
+                        </div>
                     </div>
+                    {% endif %}
+                
+
+                    {% if dados.analise.consenso.consenso_4 %}
+                    <div class="consenso-duplo rounded-xl p-4 shadow-lg">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">🔹</span>
+                            <h3 class="text-white font-bold">Quadruplo (4 padrões)</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            {% for num in dados.analise.consenso.consenso_4 %}
+                            <span class="bg-white/20 text-white px-3 py-1 rounded-full font-bold">{{ num }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if dados.analise.consenso.consenso_3 %}
+                    <div class="consenso-duplo rounded-xl p-4 shadow-lg">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">🔹</span>
+                            <h3 class="text-white font-bold">Triplo (3 padrões)</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            {% for num in dados.analise.consenso.consenso_3 %}
+                            <span class="bg-white/20 text-white px-3 py-1 rounded-full font-bold">{{ num }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if dados.analise.consenso.consenso_2 %}
+                    <div class="consenso-duplo rounded-xl p-4 shadow-lg">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">🔹</span>
+                            <h3 class="text-white font-bold">Duplo (2 padrões)</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            {% for num in dados.analise.consenso.consenso_2 %}
+                            <span class="bg-white/20 text-white px-3 py-1 rounded-full font-bold">{{ num }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+
+                </div>
+            </div>
                     <!-- Teste de aposta via WebSocket -->
                     <!-- Executar aposta via extensão (usa WebSocket já aberto da mesa) -->
                     <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4 space-y-3">
@@ -679,7 +738,7 @@
                             <h2 class="text-lg font-bold text-white">🎥 Ao vivo</h2>
                             <span id="live-status" class="text-xs text-gray-400">Aguardando...</span>
                         </div>
-
+                        
                         <!-- Seção de login -->
                         <div id="live-login-section" class="space-y-3">
                             <p class="text-xs text-gray-400">
@@ -753,7 +812,7 @@
                         <iframe
                             id="live-iframe"
                             src=""
-                            class="w-full h-[420px] md:h-[520px] lg:h-[560px] hidden"
+                            class="w-full h-[420px] md:h-[520px] lg:h-[560px]"
                             frameborder="0"
                             allowfullscreen
                         ></iframe>
@@ -1237,7 +1296,7 @@
                     const score = s.score !== undefined ? s.score : null;
                     return `
                         <div
-                            class="bg-blue-600 rounded-lg p-3 text-center"
+                            class="bg-blue-600 rounded-lg p-1 text-center"
                             data-numero="${numero}"
                         >
                             <div class="text-xl font-bold text-white">${numero}</div>
