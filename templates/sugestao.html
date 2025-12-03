@@ -1280,7 +1280,7 @@
             try {
                 liveSetStatus('Realizando login no backend local...', 'info');
 
-                const res = await fetch(`${BACKEND_HTTP_BASE}/login`, {
+                const res = await fetch(`${BACKEND_HTTP_BASE}/auth/login`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
