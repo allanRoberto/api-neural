@@ -869,6 +869,9 @@
         let liveIsLogged = false;
         let currentAnalise = null;
 
+
+        let gameSocket = null;
+        let currentIframeUrl = null;
         // ==========================================
         // CONFIGURAÇÕES - LOCALSTORAGE
         // ==========================================
@@ -1199,7 +1202,7 @@
         }
 
         async function startLiveGame() {
-            const iframe    = document.getElementById('live-iframe');
+            const iframe      = document.getElementById('live-iframe');
             const placeholder = document.getElementById('live-iframe-placeholder');
 
             if (!iframe) return;
@@ -1229,16 +1232,120 @@
                     return;
                 }
 
-                iframe.src = data.link;
+                // link do iframe que também será usado para extrair a wsUrl
+                const iframeUrl = data.link;
+                currentIframeUrl = iframeUrl;
+
+                // carrega o vídeo normalmente
+                iframe.src = iframeUrl;
                 iframe.classList.remove('hidden');
                 if (placeholder) {
                     placeholder.classList.add('hidden');
                 }
-                liveSetStatus('Jogo iniciado.', 'success');
+                liveSetStatus('Jogo iniciado. Preparando conexão com a mesa...', 'info');
+
+                // chama o servidor local para extrair a URL do WebSocket e conectar
+                await iniciarConexaoWebSocketLocal(iframeUrl);
+
             } catch (err) {
                 console.error('[Ao vivo] Erro em startLiveGame', err);
                 liveSetStatus('Erro ao iniciar jogo.', 'danger');
             }
+        }
+
+                // ==========================================
+        // WEBSOCKET LOCAL (EXTRAÇÃO DA WS E CONEXÃO)
+        // ==========================================
+
+        async function requestWsUrlFromLocal(iframeUrl) {
+            try {
+                setWsBetStatus('Pedindo URL do WebSocket ao servidor local...', 'info');
+
+                const resp = await fetch('http://localhost:4000/extract-ws', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ iframeUrl })
+                });
+
+                if (!resp.ok) {
+                    const text = await resp.text();
+                    console.error('[WS-LOCAL] Erro HTTP em /extract-ws:', resp.status, text);
+                    setWsBetStatus('Servidor local não respondeu corretamente (/extract-ws).', 'error');
+                    return null;
+                }
+
+                const data = await resp.json();
+                if (!data.wsUrl) {
+                    setWsBetStatus('Servidor local não retornou wsUrl.', 'error');
+                    return null;
+                }
+
+                console.log('[WS-LOCAL] wsUrl recebida:', data.wsUrl);
+                return data.wsUrl;
+            } catch (err) {
+                console.error('[WS-LOCAL] Falha ao chamar /extract-ws:', err);
+                setWsBetStatus('Erro ao contatar servidor local (/extract-ws).', 'error');
+                return null;
+            }
+        }
+
+        function connectGameSocket(wsUrl) {
+            if (gameSocket && gameSocket.readyState === WebSocket.OPEN) {
+                try { gameSocket.close(); } catch (_) {}
+            }
+
+            try {
+                setWsBetStatus('Conectando no WebSocket da mesa...', 'info');
+                gameSocket = new WebSocket(wsUrl);
+            } catch (err) {
+                console.error('[GAME-WS] Erro ao criar WebSocket:', err);
+                setWsBetStatus('Não foi possível abrir conexão com a mesa.', 'error');
+                return;
+            }
+
+            gameSocket.onopen = () => {
+                console.log('[GAME-WS] Conectado');
+                setWsBetStatus('Conectado ao WebSocket da mesa.', 'success');
+            };
+
+            gameSocket.onmessage = (evt) => {
+                // Se quiser inspecionar o protocolo:
+                // console.log('[GAME-WS] Mensagem:', evt.data);
+            };
+
+            gameSocket.onerror = (err) => {
+                console.error('[GAME-WS] Erro:', err);
+                setWsBetStatus('Erro na conexão com a mesa.', 'error');
+            };
+
+            gameSocket.onclose = async (evt) => {
+                console.warn('[GAME-WS] Fechado:', evt.code, evt.reason);
+                setWsBetStatus('Conexão com a mesa fechada. Tentando restaurar...', 'warn');
+
+                if (!currentIframeUrl) {
+                    return;
+                }
+
+                // tentativa simples de restauração: repete extração da wsUrl e reconecta
+                const wsUrlNova = await requestWsUrlFromLocal(currentIframeUrl);
+                if (wsUrlNova) {
+                    connectGameSocket(wsUrlNova);
+                }
+            };
+        }
+
+        async function iniciarConexaoWebSocketLocal(iframeUrl) {
+            currentIframeUrl = iframeUrl;
+
+            const wsUrl = await requestWsUrlFromLocal(iframeUrl);
+            if (!wsUrl) {
+                // erro já foi exibido em setWsBetStatus
+                return;
+            }
+
+            connectGameSocket(wsUrl);
         }
 
         function initAoVivo() {
@@ -1642,7 +1749,8 @@
             statusEl.textContent = message;
         }
 
-        // Envia o comando de aposta para o iframe, que a extensão intercepta e envia pelo WebSocket já aberto
+                // Agora envia a aposta diretamente pelo WebSocket da mesa,
+        // usando a wsUrl obtida do servidor local
         function executarApostaViaIframe() { 
             const numeros = getCurrentSuggestionNumbers();
             if (!numeros.length) {
@@ -1650,12 +1758,12 @@
                 return;
             }
 
-            const iframe = document.getElementById('live-iframe');
-            if (!iframe || !iframe.contentWindow) {
-                setWsBetStatus('Iframe da mesa não encontrado ou ainda não carregado.', 'error');
+            if (!gameSocket || gameSocket.readyState !== WebSocket.OPEN) {
+                setWsBetStatus('WebSocket da mesa não está conectado. Abra o jogo na aba "Ao vivo" e aguarde a conexão.', 'error');
                 return;
             }
 
+            // TODO: ajustar esse payload para o formato EXATO que o servidor da mesa espera
             const payload = {
                 action: 'place_bet',
                 origin: 'revesbot_frontend',
@@ -1664,18 +1772,12 @@
             };
 
             try {
-                iframe.contentWindow.postMessage(
-                    {
-                        type: 'RB_PLACE_BET',
-                        payload
-                    },
-                    '*'
-                );
-                console.log('[RevesBot] RB_PLACE_BET enviado para iframe:', payload);
-                setWsBetStatus('Comando de aposta enviado para a mesa. Veja o console da mesa/extensão.', 'success');
+                gameSocket.send(JSON.stringify(payload));
+                console.log('[RevesBot] Payload de aposta enviado pelo WebSocket:', payload);
+                setWsBetStatus('Aposta enviada pelo WebSocket. Confira o resultado na mesa.', 'success');
             } catch (err) {
-                console.error('[RevesBot] Erro ao enviar RB_PLACE_BET:', err);
-                setWsBetStatus('Erro ao enviar comando de aposta para a mesa.', 'error');
+                console.error('[RevesBot] Erro ao enviar aposta pelo WebSocket:', err);
+                setWsBetStatus('Erro ao enviar aposta pelo WebSocket.', 'error');
             }
         }
         

@@ -371,8 +371,8 @@ def _clusterizar_por_roda(
 
 def gerar_numeros_agrupados_por_regiao(
     scores_ensemble: Dict[int, float],
-    dist_cluster: int = 2,
-    min_score: float = 2.0
+    dist_cluster: int = 4,
+    min_score: float = 0.8
 ) -> List[int]:
     """
     Gera lista de números já agrupados por região:
@@ -938,11 +938,11 @@ async def sugestao_ensemble(
         # -----------------------------
         numeros_agrupados = gerar_numeros_agrupados_por_regiao(
             scores_ensemble=scores_ensemble,
-            dist_cluster=2,
-            min_score=0.0
+            dist_cluster=3,
+            min_score=0.7
         )
 
-        candidatos_top = numeros_agrupados[:quantidade]
+        candidatos_top = candidatos_top_bruto[:quantidade]
 
         # aplica regra fixos na APOSTA FINAL
         candidatos_top = aplicar_regra_fixos_ensemble(
