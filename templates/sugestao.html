@@ -1327,13 +1327,13 @@
 
         function isBetsStatus(message) {
             const text = message.toString().toLowerCase();
-            console.log(text)
-            if (text.includes("betsopen")) {
-                console.log("abriu")
-                setBetOpen(True)
-            }else if (text.includes("betsclose")) {
-                console.log("fechou")
-                setBetOpen(False)
+
+            if (text.includes('betsopen')) {
+                console.log('[GAME-WS] >>>>> APOSTAS ABERTAS');
+                setBetOpen(true);   // habilita o botão e marca estado
+            } else if (text.includes('betsclose')) {
+                console.log('[GAME-WS] <<<<< APOSTAS FECHADAS');
+                setBetOpen(false);  // desabilita o botão e marca estado
             }
         }
 
@@ -1363,15 +1363,33 @@
                 setWsBetStatus('Conectado ao WebSocket da mesa.', 'success');
             };
 
-            gameSocket.onmessage = (data) => {
-                const text = data.toString();
-                console.log(text)
-                isBetsStatus(text)
+            gameSocket.onmessage = (event) => {
+                let text = '';
+
+                // event.data normalmente já vem como string (XML) do Pragmatic
+                if (typeof event.data === 'string') {
+                    text = event.data;
+                } else if (event.data instanceof ArrayBuffer) {
+                    text = new TextDecoder('utf-8').decode(event.data);
+                } else {
+                    text = String(event.data);
+                }
+
+                // Logar TODAS as mensagens para você monitorar o fluxo
+                console.log('[GAME-WS] Mensagem recebida:', text);
+
+                // Atualiza o estado de apostas (aberta/fechada)
+                isBetsStatus(text);
+
+                // Quando estiver aberta, tentamos extrair o gameInfo
                 if (betIsOpen) {
-                console.log("[ws] Apostas abertas...");
-                gameInfo = parseBetsOpenMessage(text);
-                };
-            }
+                    const info = parseBetsOpenMessage(text);
+                    if (info) {
+                        gameInfo = info;
+                        console.log('[GAME-WS] gameInfo atualizado:', gameInfo);
+                    }
+                }
+            };
 
             gameSocket.onerror = (err) => {
                 console.error('[GAME-WS] Erro:', err);
