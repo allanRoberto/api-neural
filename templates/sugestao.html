@@ -1327,6 +1327,7 @@
 
         function isBetsStatus(message) {
             const text = message.toString().toLowerCase();
+            console.log(text)
             if (text.includes("betsopen")) {
                 console.log("abriu")
                 setBetOpen(True)
