@@ -1271,7 +1271,7 @@
                 currentIframeUrl = iframeUrl;
 
                 // carrega o vídeo normalmente
-                iframe.src = "#";
+                iframe.src = "";
                 iframe.classList.remove('hidden');
                 if (placeholder) {
                     placeholder.classList.add('hidden');
@@ -1528,94 +1528,6 @@
         }
 
         // ==========================================
-        // FAVORITOS - STATUS E PAYLOAD
-        // ==========================================
-
-        function setFavSaveStatus(message, type = 'info') {
-            const statusEl = document.getElementById('fav-save-status');
-            if (!statusEl) return;
-
-            let color = 'text-gray-400';
-            if (type === 'error')   color = 'text-red-400';
-            if (type === 'success') color = 'text-emerald-400';
-            if (type === 'warn')    color = 'text-amber-300';
-
-            statusEl.className = `mt-2 text-[11px] min-h-[1.25rem] ${color}`;
-            statusEl.textContent = message;
-        }
-
-        // 0 → 2, demais números +3, conforme padrão observado
-        function mapNumeroToPragmaticFavCode(num) {
-            if (num === 0) return 2;
-            return num + 3;
-        }
-
-        function buildFavPayloadFromAnalise(analise) {
-            if (!analise || !analise.sugestoes) return null;
-
-            const principaisRaw = analise.sugestoes.principais || [];
-            const numeros = principaisRaw
-                .map(s => (typeof s === 'number' ? s : s.numero))
-                .filter(n => typeof n === 'number' && !Number.isNaN(n));
-
-            if (!numeros.length) return null;
-
-            const stake = 0.5; // 50 centavos
-            const partes = numeros.map(n => `${mapNumeroToPragmaticFavCode(n)}-${stake}`);
-
-            const betNameBase = 'RevesBot Bet';
-            const favId = 'fav-' + Date.now();
-            const favNameEncoded = encodeURIComponent(betNameBase + ' 1');
-
-            const favString = `${favNameEncoded}/${partes.join(',')}/false/${favId}`;
-
-            return {
-                fav1: favString,
-                fav2: "null",
-                fav3: "null",
-                fav4: "null",
-                fav5: "null",
-                fav6: "null",
-                fav7: "null",
-                fav8: "null",
-                fav9: "null",
-                fav10: "null",
-                gameType: "classic-roulette"
-            };
-        }
-
-        async function salvarApostaComoFavorito(analise) {
-            const payload = buildFavPayloadFromAnalise(analise);
-            if (!payload) {
-                setFavSaveStatus('Nenhuma sugestão para salvar nos favoritos.', 'warn');
-                return;
-            }
-
-            setFavSaveStatus('Salvando aposta nos favoritos...', 'info');
-
-            try {
-                const res = await fetch(PRAGMATIC_SAVE_FAV_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!res.ok) {
-                    console.error('[Favoritos] Erro HTTP ao salvar aposta:', res.status);
-                    setFavSaveStatus('Não foi possível salvar a aposta nos favoritos.', 'error');
-                    return;
-                }
-
-                setFavSaveStatus('Aposta salva nos favoritos da mesa.', 'success');
-            } catch (err) {
-                console.error('[Favoritos] Erro ao salvar aposta nos favoritos', err);
-                setFavSaveStatus('Erro ao salvar a aposta nos favoritos.', 'error');
-            }
-        }
-
-        // ==========================================
         // GERAR NOVA ANÁLISE VIA API (SEM RELOAD)
         // ==========================================
 
@@ -1678,8 +1590,7 @@
                 salvarNoHistorico(currentAnalise);
                 renderLiveSugestao(currentAnalise);
 
-                // Após carregar nova análise, tenta salvar aposta nos favoritos
-                salvarApostaComoFavorito(currentAnalise);
+        
             } catch (err) {
                 console.error('[Ao vivo] Erro em gerarNovaAnalise', err);
                 alert('Erro ao gerar nova análise.');
@@ -1769,40 +1680,7 @@
             window.location.href = url;
         }
 
-        // ==========================================
-        // INICIALIZAÇÃO
-        // ==========================================
-
-        window.addEventListener('load', async() => {
-            const config = carregarConfiguracoes();
-            preencherFormulario(config);
-            atualizarSomaPesos();
-            
-            const dadosAtuais = {{ dados | tojson | safe }};
-            currentAnalise = dadosAtuais;
-
-            salvarNoHistorico(currentAnalise);
-            renderLiveSugestao(currentAnalise);
-
-            initAoVivo();
-
-            showTab('sugestao');
-
-            if (!currentIframeUrl) {
-                    return;
-                }
-            
-            let wsUrl = await requestWsUrlFromLocal(iframeUrl)
-
-            connectGameSocket(wsUrl);
-
-            updateBetButton();
-
-
-        });
-    </script>
-    <script>
-        // --- TESTE DE APOSTA VIA WEBSOCKET (via iframe + extensão) ---
+         // --- TESTE DE APOSTA VIA WEBSOCKET (via iframe + extensão) ---
 
         // Lê os números da sugestão atual na aba Ao vivo (divs com data-numero)
         function getCurrentSuggestionNumbers() {
@@ -1893,12 +1771,38 @@
         
         // Bind do botão após o DOM estar pronto
         document.addEventListener('DOMContentLoaded', () => {
-            const btnExec = document.getElementById('btn-executar-aposta');
-            if (btnExec) {
-                btnExec.addEventListener('click', executarAposta);
-            }
+
+        // ==========================================
+        // INICIALIZAÇÃO
+        // ==========================================
+
+        window.addEventListener('load', async() => {
+            const config = carregarConfiguracoes();
+            preencherFormulario(config);
+            atualizarSomaPesos();
+            
+            const dadosAtuais = {{ dados | tojson | safe }};
+            currentAnalise = dadosAtuais;
+
+            salvarNoHistorico(currentAnalise);
+            renderLiveSugestao(currentAnalise);
+
+            initAoVivo();
+
+            showTab('sugestao');
+
+            if (!currentIframeUrl) {
+                    return;
+                }
+            
+            let wsUrl = await requestWsUrlFromLocal(iframeUrl)
+
+            connectGameSocket(wsUrl);
+
+            updateBetButton();
         });
     </script>
+    
     
 </body>
 </html>
