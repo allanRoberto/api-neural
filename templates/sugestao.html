@@ -1335,8 +1335,8 @@
 
             gameSocket.onmessage = (data) => {
                 const text = data.toString();
-
-                if (isBetsOpenMessage(text)) {
+                isBetsStatus(text)
+                if (betIsOpen) {
                 console.log("[ws] Apostas abertas...");
                 gameInfo = parseBetsOpenMessage(text);
                 };
