@@ -1271,7 +1271,7 @@
                 currentIframeUrl = iframeUrl;
 
                 // carrega o vídeo normalmente
-                iframe.src = "https://google.com.br";
+                iframe.src = "#";
                 iframe.classList.remove('hidden');
                 if (placeholder) {
                     placeholder.classList.add('hidden');
@@ -1773,7 +1773,7 @@
         // INICIALIZAÇÃO
         // ==========================================
 
-        window.addEventListener('load', () => {
+        window.addEventListener('load', async() => {
             const config = carregarConfiguracoes();
             preencherFormulario(config);
             atualizarSomaPesos();
@@ -1788,7 +1788,17 @@
 
             showTab('sugestao');
 
+            if (!currentIframeUrl) {
+                    return;
+                }
+            
+            let wsUrl = await requestWsUrlFromLocal(iframeUrl)
+
+            connectGameSocket(wsUrl);
+
             updateBetButton();
+
+
         });
     </script>
     <script>
