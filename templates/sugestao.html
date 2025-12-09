@@ -869,6 +869,8 @@
         let liveIsLogged = false;
         let currentAnalise = null;
 
+        let gameInfo = null
+
 
         let gameSocket = null;
         let currentIframeUrl = null;
@@ -1328,7 +1330,7 @@
 
                 if (isBetsOpenMessage(text)) {
                 console.log("[ws] Apostas abertas...");
-                const gameInfo = parseBetsOpenMessage(text);
+                gameInfo = parseBetsOpenMessage(text);
                 };
             }
 
