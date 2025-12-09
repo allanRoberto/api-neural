@@ -1291,6 +1291,19 @@
             }
         }
 
+        function isBetsOpenMessage(message) {
+            const text = message.toString().toLowerCase();
+            // Ajuste aqui conforme o evento de "bets open" da mesa (pode ser <betsopen, "BetsOpen", etc.)
+            return text.includes("betsopen");
+        }
+
+        function parseBetsOpenMessage(xmlMessage) {
+            const gameMatch = xmlMessage.match(/game="([^"]+)"/);
+            const tableMatch = xmlMessage.match(/table="([^"]+)"/);
+            return (gameMatch && tableMatch) ? { game: gameMatch[1], table: tableMatch[1] } : null;
+        }
+
+
         function connectGameSocket(wsUrl) {
             if (gameSocket && gameSocket.readyState === WebSocket.OPEN) {
                 try { gameSocket.close(); } catch (_) {}
@@ -1310,10 +1323,14 @@
                 setWsBetStatus('Conectado ao WebSocket da mesa.', 'success');
             };
 
-            gameSocket.onmessage = (evt) => {
-                // Se quiser inspecionar o protocolo:
-                // console.log('[GAME-WS] Mensagem:', evt.data);
-            };
+            gameSocket.onmessage = (data) => {
+                const text = data.toString();
+
+                if (isBetsOpenMessage(text)) {
+                console.log("[ws] Apostas abertas...");
+                const gameInfo = parseBetsOpenMessage(text);
+                };
+            }
 
             gameSocket.onerror = (err) => {
                 console.error('[GAME-WS] Erro:', err);
@@ -1749,6 +1766,30 @@
             statusEl.textContent = message;
         }
 
+        function sendBet(ws, gameInfo, bets, valorAposta) {
+            const checksum = generateChecksumTimestamp();
+            const betsXML = bets.map(num => {
+                let betCode = Number(num) == 0 ? 2 : Number(num) + 3;
+                return `<bet amt="${valorAposta}" bc="${betCode}" ck="${checksum}" />`;
+            }).join("");
+            
+            const message =
+                `<command channel="table-${gameInfo.table}" >` +
+                `<lpbet gm="roulette_desktop" gId="${gameInfo.game}" uId="ppc1735139140386" ck="${checksum}">` +
+                betsXML +
+                `</lpbet></command>`;
+            
+            console.log(`🎲 Apostando em ${bets.join(', ')} | Valor: ${valorAposta} centavos`);
+            ws.send(message);
+        }
+
+        function parseBetsOpenMessage(xmlMessage) {
+            const gameMatch = xmlMessage.match(/game="([^"]+)"/);
+            const tableMatch = xmlMessage.match(/table="([^"]+)"/);
+            return (gameMatch && tableMatch) ? { game: gameMatch[1], table: tableMatch[1] } : null;
+        }
+
+
                 // Agora envia a aposta diretamente pelo WebSocket da mesa,
         // usando a wsUrl obtida do servidor local
         function executarApostaViaIframe() { 
@@ -1772,7 +1813,7 @@
             };
 
             try {
-                gameSocket.send(JSON.stringify(payload));
+                sendBet(gameSocket, gameInfo, numeros, 0.5)
                 console.log('[RevesBot] Payload de aposta enviado pelo WebSocket:', payload);
                 setWsBetStatus('Aposta enviada pelo WebSocket. Confira o resultado na mesa.', 'success');
             } catch (err) {
