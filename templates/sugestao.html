@@ -714,13 +714,11 @@
                     <div class="bg-gray-900/40 border border-gray-700 rounded-xl p-4 space-y-3">
                         <div class="flex items-center justify-between mb-1">
                             <h3 class="text-sm font-semibold text-white">⚡ Executar aposta</h3>
-                            <span class="text-[10px] text-gray-400 uppercase tracking-wide">
-                                via extensão
-                            </span>
                         </div>
                         <button
                             id="btn-executar-aposta"
                             type="button"
+                            disabled="{betIsOpen}"
                             class="mt-2 w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-semibold py-2.5 px-4 rounded-lg text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <span class="text-lg leading-none">⚡</span>
@@ -870,6 +868,8 @@
         let currentAnalise = null;
 
         let gameInfo = null
+
+        let betIsOpen = false
 
 
         let gameSocket = null;
@@ -1189,6 +1189,11 @@
             }
         }
 
+        function generateChecksumTimestamp() {
+            return Date.now().toString();
+        }
+
+
         function doLiveLogout() {
             const iframe = document.getElementById('live-iframe');
             const placeholder = document.getElementById('live-iframe-placeholder');
@@ -1293,10 +1298,13 @@
             }
         }
 
-        function isBetsOpenMessage(message) {
+        function isBetsStatus(message) {
             const text = message.toString().toLowerCase();
-            // Ajuste aqui conforme o evento de "bets open" da mesa (pode ser <betsopen, "BetsOpen", etc.)
-            return text.includes("betsopen");
+            if (text.includes("betsopen")) {
+                betIsOpen = True
+            }else if (text.includes("betsclose")) {
+                betIsOpen = False
+            }
         }
 
         function parseBetsOpenMessage(xmlMessage) {
