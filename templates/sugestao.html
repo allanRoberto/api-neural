@@ -1328,8 +1328,10 @@
         function isBetsStatus(message) {
             const text = message.toString().toLowerCase();
             if (text.includes("betsopen")) {
+                console.log("abriu")
                 setBetOpen(True)
             }else if (text.includes("betsclose")) {
+                console.log("fechou")
                 setBetOpen(False)
             }
         }
@@ -1362,6 +1364,7 @@
 
             gameSocket.onmessage = (data) => {
                 const text = data.toString();
+                console.log(text)
                 isBetsStatus(text)
                 if (betIsOpen) {
                 console.log("[ws] Apostas abertas...");
