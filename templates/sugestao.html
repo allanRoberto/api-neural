@@ -869,7 +869,34 @@
 
         let gameInfo = null
 
-        let betIsOpen = false
+        // ==========================================
+        // CONTROLE DO BOTÃO DE APOSTA
+        // ==========================================
+        // Representa se as apostas estão abertas. Quando verdadeiro, o botão "Executar aposta"
+        // é habilitado; quando falso, o botão fica desabilitado. A própria marcação HTML
+        // não deve conter atributo "disabled", pois isso travaria o botão permanentemente.
+        let betIsOpen = false;
+
+        /**
+         * Atualiza o estado do botão de aposta de acordo com o valor de betIsOpen.
+         * Se betIsOpen for verdadeiro, o botão é habilitado; caso contrário, é desabilitado.
+         */
+        function updateBetButton() {
+            const btn = document.getElementById('btn-executar-aposta');
+            if (btn) {
+                // se betIsOpen for falso, desabilita; se verdadeiro, habilita
+                btn.disabled = !betIsOpen;
+            }
+        }
+
+        /**
+         * Define se as apostas estão abertas e atualiza o botão.
+         * @param {boolean} isOpen - Indica se é possível apostar (true) ou não (false).
+         */
+        function setBetOpen(isOpen) {
+            betIsOpen = !!isOpen;
+            updateBetButton();
+        }
 
 
         let gameSocket = null;
@@ -1260,7 +1287,7 @@
             }
         }
 
-                // ==========================================
+        // ==========================================
         // WEBSOCKET LOCAL (EXTRAÇÃO DA WS E CONEXÃO)
         // ==========================================
 
@@ -1301,9 +1328,9 @@
         function isBetsStatus(message) {
             const text = message.toString().toLowerCase();
             if (text.includes("betsopen")) {
-                betIsOpen = True
+                setBetOpen(True)
             }else if (text.includes("betsclose")) {
-                betIsOpen = False
+                setBetOpen(False)
             }
         }
 
@@ -1738,6 +1765,8 @@
             initAoVivo();
 
             showTab('sugestao');
+
+            updateBetButton();
         });
     </script>
     <script>
@@ -1799,10 +1828,8 @@
             return (gameMatch && tableMatch) ? { game: gameMatch[1], table: tableMatch[1] } : null;
         }
 
-
-                // Agora envia a aposta diretamente pelo WebSocket da mesa,
         // usando a wsUrl obtida do servidor local
-        function executarApostaViaIframe() { 
+        function executarAposta() { 
             const numeros = getCurrentSuggestionNumbers();
             if (!numeros.length) {
                 setWsBetStatus('Nenhum número de sugestão encontrado para montar a aposta.', 'warn');
@@ -1836,7 +1863,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             const btnExec = document.getElementById('btn-executar-aposta');
             if (btnExec) {
-                btnExec.addEventListener('click', executarApostaViaIframe);
+                btnExec.addEventListener('click', executarAposta);
             }
         });
     </script>
