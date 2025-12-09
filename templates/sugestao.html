@@ -1680,7 +1680,7 @@
             window.location.href = url;
         }
 
-         // --- TESTE DE APOSTA VIA WEBSOCKET (via iframe + extensão) ---
+        
 
         // Lê os números da sugestão atual na aba Ao vivo (divs com data-numero)
         function getCurrentSuggestionNumbers() {
@@ -1771,6 +1771,11 @@
         
         // Bind do botão após o DOM estar pronto
         document.addEventListener('DOMContentLoaded', () => {
+            const btnExec = document.getElementById('btn-executar-aposta');
+            if (btnExec) {
+                btnExec.addEventListener('click', executarAposta);
+            }
+        });
 
         // ==========================================
         // INICIALIZAÇÃO
@@ -1802,7 +1807,6 @@
             updateBetButton();
         });
     </script>
-    
     
 </body>
 </html>
