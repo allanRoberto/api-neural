@@ -31,6 +31,13 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
+
+        /* Estado visual quando a aposta está fechando */
+            .btn-bet-closing {
+                background-image: linear-gradient(90deg, #f97316, #ef4444) !important;
+                box-shadow: 0 0 20px rgba(239, 68, 68, 0.7);
+                animation: pulse 1s ease-in-out infinite;
+            }
         .loading {
             border: 4px solid #1e293b;
             border-top: 4px solid #3b82f6;
@@ -718,12 +725,12 @@
                         <button
                             id="btn-executar-aposta"
                             type="button"
-                            disabled="{betIsOpen}"
                             class="mt-2 w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-semibold py-2.5 px-4 rounded-lg text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <span class="text-lg leading-none">⚡</span>
-                            <span>Executar aposta</span>
+                            <span id="btn-executar-aposta-label">Executar aposta</span>
                         </button>
+                        <p id="ws-aposta-status" class="mt-2 text-[11px] min-h-[1.25rem] text-gray-400"></p>
 
                         <div
                             id="ws-aposta-status"
@@ -869,38 +876,137 @@
 
         let gameInfo = null
 
-        // ==========================================
-        // CONTROLE DO BOTÃO DE APOSTA
-        // ==========================================
-        // Representa se as apostas estão abertas. Quando verdadeiro, o botão "Executar aposta"
-        // é habilitado; quando falso, o botão fica desabilitado. A própria marcação HTML
-        // não deve conter atributo "disabled", pois isso travaria o botão permanentemente.
+        // ------------------------------------------
+        // CONTROLE DO BOTÃO DE APOSTA + CONTADOR
+        // ------------------------------------------
         let betIsOpen = false;
+        let betClosingSoon = false;
+        let betCountdown = null;
+        let betCountdownInterval = null;
 
         /**
-         * Atualiza o estado do botão de aposta de acordo com o valor de betIsOpen.
-         * Se betIsOpen for verdadeiro, o botão é habilitado; caso contrário, é desabilitado.
+         * Atualiza o estado visual do botão de aposta
+         * (habilitado/desabilitado, texto, cor/pulso).
          */
         function updateBetButton() {
             const btn = document.getElementById('btn-executar-aposta');
-            if (btn) {
-                // se betIsOpen for falso, desabilita; se verdadeiro, habilita
-                btn.disabled = !betIsOpen;
+            const label = document.getElementById('btn-executar-aposta-label');
+            if (!btn) return;
+
+            // habilita/desabilita
+            btn.disabled = !betIsOpen;
+
+            // remove estado de "fechando"
+            btn.classList.remove('btn-bet-closing');
+
+            // se estiver fechando aposta e ainda for possível apostar, aplica destaque
+            if (betIsOpen && betClosingSoon) {
+                btn.classList.add('btn-bet-closing');
+            }
+
+            // texto do label
+            if (label) {
+                if (betIsOpen && typeof betCountdown === 'number' && betCountdown > 0) {
+                    label.textContent = `Executar aposta (${betCountdown})`;
+                } else {
+                    label.textContent = 'Executar aposta';
+                }
             }
         }
 
         /**
          * Define se as apostas estão abertas e atualiza o botão.
-         * @param {boolean} isOpen - Indica se é possível apostar (true) ou não (false).
+         * @param {boolean} isOpen
          */
         function setBetOpen(isOpen) {
             betIsOpen = !!isOpen;
+            // se fechar, zera contador e flag de "fechando"
+            if (!betIsOpen) {
+                betClosingSoon = false;
+                stopBetCountdown();
+            }
+            updateBetButton();
+        }
+
+        function startBetCountdown(seconds) {
+            betCountdown = seconds;
+
+            if (betCountdownInterval) {
+                clearInterval(betCountdownInterval);
+                betCountdownInterval = null;
+            }
+
+            updateBetButton();
+
+            betCountdownInterval = setInterval(() => {
+                if (!betIsOpen) {
+                    stopBetCountdown();
+                    return;
+                }
+
+                if (typeof betCountdown === 'number' && betCountdown > 0) {
+                    betCountdown -= 1;
+                    updateBetButton();
+                } else {
+                    stopBetCountdown();
+                }
+            }, 1000);
+        }
+
+        function stopBetCountdown() {
+            if (betCountdownInterval) {
+                clearInterval(betCountdownInterval);
+                betCountdownInterval = null;
+            }
+            betCountdown = null;
             updateBetButton();
         }
 
 
         let gameSocket = null;
         let currentIframeUrl = null;
+
+
+        // ------------------------------------------
+// WATCHDOG DE WEBSOCKET "TRAVADO"
+// ------------------------------------------
+let lastWsMessageAt = null;
+let wsWatchdogInterval = null;
+
+function startWsWatchdog() {
+    if (wsWatchdogInterval) {
+        clearInterval(wsWatchdogInterval);
+    }
+
+    lastWsMessageAt = Date.now();
+
+    // a cada 10s checamos se faz tempo demais sem receber nada
+    wsWatchdogInterval = setInterval(() => {
+        if (!gameSocket || gameSocket.readyState !== WebSocket.OPEN) {
+            return;
+        }
+
+        const now = Date.now();
+        // se passaram mais de 30s sem nenhuma mensagem, consideramos travado
+        if (lastWsMessageAt && (now - lastWsMessageAt) > 30000) {
+            console.warn('[GAME-WS] Conexão parece travada, forçando reconexão...');
+            setWsBetStatus('Conexão travada, reconectando...', 'warn');
+
+            try {
+                gameSocket.close(); // o onclose já cuida de reconectar
+            } catch (e) {
+                console.error('[GAME-WS] Erro ao fechar socket travado:', e);
+            }
+        }
+    }, 10000);
+}
+
+function stopWsWatchdog() {
+    if (wsWatchdogInterval) {
+        clearInterval(wsWatchdogInterval);
+        wsWatchdogInterval = null;
+    }
+}
         // ==========================================
         // CONFIGURAÇÕES - LOCALSTORAGE
         // ==========================================
@@ -1328,14 +1434,40 @@
         function isBetsStatus(message) {
             const text = message.toString().toLowerCase();
 
-            if (text.includes('betsopen')) {
-                console.log('[GAME-WS] >>>>> APOSTAS ABERTAS');
-                setBetOpen(true);   // habilita o botão e marca estado
-            } else if (text.includes('betsclose')) {
-                console.log('[GAME-WS] <<<<< APOSTAS FECHADAS');
-                setBetOpen(false);  // desabilita o botão e marca estado
+            // timer da rodada: <timer ...>10</timer>
+            const timerMatch = text.match(/<timer[^>]*>(\d+)<\/timer>/);
+            if (timerMatch) {
+                const seconds = parseInt(timerMatch[1], 10);
+                if (!Number.isNaN(seconds)) {
+                    // nova janela de tempo => aposta aberta
+                    betClosingSoon = false;
+                    setBetOpen(true);
+                    startBetCountdown(seconds);
+                }
             }
-        }
+
+            // apostas fechando: <betsclosingsoon ...>
+            if (text.includes('<betsclosingsoon')) {
+                console.log('[GAME-WS] >>>>> APOSTAS FECHANDO');
+                betClosingSoon = true;
+                // ainda deixamos betIsOpen = true, só mudamos visual
+                updateBetButton();
+            }
+
+            // apostas fechadas: <betsclosed ...>
+            if (text.includes('<betsclosed')) {
+                console.log('[GAME-WS] <<<<< APOSTAS FECHADAS');
+                betClosingSoon = false;
+                setBetOpen(false); // desabilita e zera contador
+            }
+
+            // se algum dia a mesa mandar explicitamente "betsopen", ainda tratamos:
+            if (text.includes('betsopen')) {
+                console.log('[GAME-WS] >>>>> APOSTAS ABERTAS (betsopen)');
+                betClosingSoon = false;
+                setBetOpen(true);
+            }
+}
 
         function parseBetsOpenMessage(xmlMessage) {
             const gameMatch = xmlMessage.match(/game="([^"]+)"/);
@@ -1345,71 +1477,95 @@
 
 
         function connectGameSocket(wsUrl) {
-            if (gameSocket && gameSocket.readyState === WebSocket.OPEN) {
-                try { gameSocket.close(); } catch (_) {}
-            }
-
             try {
-                setWsBetStatus('Conectando no WebSocket da mesa...', 'info');
-                gameSocket = new WebSocket(wsUrl);
-            } catch (err) {
-                console.error('[GAME-WS] Erro ao criar WebSocket:', err);
-                setWsBetStatus('Não foi possível abrir conexão com a mesa.', 'error');
-                return;
-            }
-
-            gameSocket.onopen = () => {
-                console.log('[GAME-WS] Conectado');
-                setWsBetStatus('Conectado ao WebSocket da mesa.', 'success');
-            };
-
-            gameSocket.onmessage = (event) => {
-                let text = '';
-
-                // event.data normalmente já vem como string (XML) do Pragmatic
-                if (typeof event.data === 'string') {
-                    text = event.data;
-                } else if (event.data instanceof ArrayBuffer) {
-                    text = new TextDecoder('utf-8').decode(event.data);
-                } else {
-                    text = String(event.data);
-                }
-
-                // Logar TODAS as mensagens para você monitorar o fluxo
-                console.log('[GAME-WS] Mensagem recebida:', text);
-
-                // Atualiza o estado de apostas (aberta/fechada)
-                isBetsStatus(text);
-
-                // Quando estiver aberta, tentamos extrair o gameInfo
-                if (betIsOpen) {
-                    const info = parseBetsOpenMessage(text);
-                    if (info) {
-                        gameInfo = info;
-                        console.log('[GAME-WS] gameInfo atualizado:', gameInfo);
-                    }
-                }
-            };
-
-            gameSocket.onerror = (err) => {
-                console.error('[GAME-WS] Erro:', err);
-                setWsBetStatus('Erro na conexão com a mesa.', 'error');
-            };
-
-            gameSocket.onclose = async (evt) => {
-                console.warn('[GAME-WS] Fechado:', evt.code, evt.reason);
-                setWsBetStatus('Conexão com a mesa fechada. Tentando restaurar...', 'warn');
-
-                if (!currentIframeUrl) {
+                if (!wsUrl) {
+                    console.warn('[GAME-WS] wsUrl inválida:', wsUrl);
+                    setWsBetStatus('Não foi possível conectar ao WebSocket da mesa (wsUrl vazia).', 'error');
                     return;
                 }
 
-                // tentativa simples de restauração: repete extração da wsUrl e reconecta
-                const wsUrlNova = await requestWsUrlFromLocal(currentIframeUrl);
-                if (wsUrlNova) {
-                    connectGameSocket(wsUrlNova);
+                if (gameSocket && gameSocket.readyState === WebSocket.OPEN) {
+                    console.log('[GAME-WS] Já existe um WebSocket conectado. Fechando conexão antiga...');
+                    try {
+                        gameSocket.close();
+                    } catch (e) {
+                        console.error('[GAME-WS] Erro ao fechar socket antigo:', e);
+                    }
                 }
-            };
+
+                console.log('[GAME-WS] Conectando ao WebSocket da mesa:', wsUrl);
+                setWsBetStatus('Conectando ao WebSocket da mesa...', 'info');
+
+                gameSocket = new WebSocket(wsUrl);
+
+                gameSocket.onopen = () => {
+                    console.log('[GAME-WS] Conectado');
+                    setWsBetStatus('Conectado ao WebSocket da mesa.', 'success');
+
+                    // iniciar watchdog de "travamento"
+                    startWsWatchdog();
+
+                    // reset de estados
+                    lastWsMessageAt = Date.now();
+                    betClosingSoon = false;
+                    setBetOpen(false); // só será aberto quando receber timer/betsopen
+                };
+
+                gameSocket.onmessage = (event) => {
+                    lastWsMessageAt = Date.now(); // atualiza para o watchdog
+
+                    let text;
+                    if (typeof event.data === 'string') {
+                        text = event.data;
+                    } else if (event.data instanceof ArrayBuffer) {
+                        const decoder = new TextDecoder('utf-8');
+                        text = decoder.decode(event.data);
+                    } else {
+                        text = String(event.data);
+                    }
+
+                    console.log('[GAME-WS] Mensagem recebida:', text);
+
+                    // Atualiza estado de apostas (timer, betsclosingsoon, betsclosed, betsopen)
+                    isBetsStatus(text);
+
+                    // Se as apostas estiverem (ou ficarem) abertas, tenta extrair game/table
+                    if (betIsOpen) {
+                        const info = parseBetsOpenMessage(text);
+                        if (info) {
+                            gameInfo = info;
+                            console.log('[GAME-WS] gameInfo atualizado:', gameInfo);
+                        }
+                    }
+                };
+
+                gameSocket.onerror = (err) => {
+                    console.error('[GAME-WS] Erro no WebSocket de jogo:', err);
+                    setWsBetStatus('Erro no WebSocket da mesa.', 'error');
+                };
+
+                gameSocket.onclose = async () => {
+                    console.log('[GAME-WS] Conexão fechada.');
+                    setWsBetStatus('Conexão com a mesa encerrada. Tentando reconectar...', 'warn');
+
+                    stopWsWatchdog();
+                    setBetOpen(false);
+                    gameInfo = null;
+
+                    // tenta reconectar usando o mesmo iframeUrl atual
+                    if (currentIframeUrl) {
+                        const newWsUrl = await requestWsUrlFromLocal(currentIframeUrl);
+                        if (newWsUrl) {
+                            connectGameSocket(newWsUrl);
+                        } else {
+                            setWsBetStatus('Não foi possível obter nova wsUrl para reconectar.', 'error');
+                        }
+                    }
+                };
+            } catch (err) {
+                console.error('[GAME-WS] Erro ao tentar conectar WebSocket da mesa:', err);
+                setWsBetStatus('Falha ao conectar ao WebSocket da mesa.', 'error');
+            }
         }
 
         async function iniciarConexaoWebSocketLocal(iframeUrl) {
